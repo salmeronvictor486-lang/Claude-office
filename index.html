@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F0E8">
+<title>Claude Office</title>
+<style>
+  :root{
+    --bg:#F4F0E8; --paper:#FBF9F4; --card:#FFFFFF; --line:#DED5C5; --line-2:#EAE3D6;
+    --ink:#1F1E1B; --ink-2:#3B3934; --muted:#79736A;
+    --clay:#D97757; --clay-d:#B95F41; --clay-l:#F6E3DA;
+    --olive:#788C5D; --sky:#6A9BCC; --amber:#D99A2B; --green:#4F9A68; --red:#C9573F;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-rows:auto 1fr;height:100vh;height:100dvh}
+
+  /* ── Barra superior ── */
+  header{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--paper)}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand svg{flex:none}
+  .brand h1{margin:0;font:600 21px/1 ui-serif,Georgia,"Iowan Old Style","Times New Roman",serif;letter-spacing:-.015em}
+  .brand small{display:block;margin-top:4px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .grow{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--card);font-size:12.5px;white-space:nowrap;color:var(--ink-2)}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:#B9B2A6}
+  .pill.live .dot{background:var(--green);animation:pulse 2s infinite}
+  .pill.demo .dot{background:var(--amber)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 #4F9A6855}70%{box-shadow:0 0 0 7px #4F9A6800}100%{box-shadow:0 0 0 0 #4F9A6800}}
+  .stat{font-variant-numeric:tabular-nums}
+  button{font:inherit;cursor:pointer;height:32px;padding:0 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    transition:border-color .15s, background .15s, transform .1s}
+  button:hover{border-color:var(--clay)}
+  button:active{transform:translateY(1px)}
+  button.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+  button.dark:hover{background:#000}
+  button.toggle[aria-pressed="true"]{background:var(--clay-l);border-color:var(--clay);color:var(--clay-d)}
+
+  /* ── Cuerpo ── */
+  .main{display:grid;grid-template-columns:minmax(0,1fr) 370px;min-height:0}
+  .stage{position:relative;min-height:0;padding:14px;
+    background:
+      radial-gradient(circle at 1px 1px, #00000010 1px, transparent 1.2px) 0 0/18px 18px,
+      var(--bg)}
+  .stage canvas{width:100%;height:100%;display:block;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .hint{position:absolute;left:24px;bottom:22px;max-width:min(440px,calc(100% - 48px));padding:9px 13px;border-radius:12px;
+    background:#1F1E1Be6;color:#F6F1E8;font-size:12.5px;box-shadow:0 8px 24px #0002;transition:opacity .4s, transform .4s}
+  .hint.hide{opacity:0;transform:translateY(6px);pointer-events:none}
+  .hint code{background:#ffffff1f;padding:1px 5px;border-radius:5px}
+
+  /* ── Panel lateral ── */
+  aside{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);background:var(--paper)}
+  .tabs{display:flex;gap:4px;padding:12px 14px 0}
+  .tab{flex:1;height:34px;border-radius:10px 10px 0 0;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--muted);font-weight:600}
+  .tab[aria-selected="true"]{background:var(--card);border-color:var(--line);color:var(--ink)}
+  .tab:hover{border-color:var(--line)}
+  .pane{flex:1;min-height:0;overflow:auto;margin:0 14px;background:var(--card);border:1px solid var(--line);border-radius:0 0 var(--radius) var(--radius)}
+  .pane[hidden]{display:none}
+
+  .roster{list-style:none;margin:0;padding:6px}
+  .roster li{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px;border-radius:11px;cursor:pointer}
+  .roster li:hover{background:#F7F2EA}
+  .roster li.sel{background:var(--clay-l)}
+  .roster canvas{width:40px;height:40px}
+  .roster b{display:block;font-size:13.5px}
+  .roster .act{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:#F1ECE3;color:var(--ink-2);white-space:nowrap}
+  .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:#B9B2A6}
+  .chip.work{background:#E7F2EA;color:#2F6E45}.chip.work::before{background:var(--green)}
+  .chip.walk{background:#EAF1F8;color:#3D6A94}.chip.walk::before{background:var(--sky)}
+  .chip.break{background:#F8EEDD;color:#8A5E14}.chip.break::before{background:var(--amber)}
+  .chip.wait{background:#FBE5DF;color:#9C3B26}.chip.wait::before{background:var(--red);animation:pulse 1.4s infinite}
+
+  .feed{list-style:none;margin:0;padding:6px 6px 10px}
+  .feed li{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px 8px;border-bottom:1px solid var(--line-2);font-size:12.8px}
+  .feed li:last-child{border-bottom:none}
+  .feed .ic{font-size:15px;line-height:1.2;text-align:center}
+  .feed .meta{color:var(--muted);font-size:11.5px}
+  .feed .txt{word-break:break-word}
+  .feed li.new{animation:flash 1.2s ease-out}
+  @keyframes flash{from{background:var(--clay-l)}to{background:transparent}}
+  .empty{padding:26px 18px;color:var(--muted);text-align:center;font-size:13px}
+
+  /* Ficha del agente */
+  .detail{padding:16px}
+  .detail .head{display:flex;gap:13px;align-items:center}
+  .detail .head canvas{width:64px;height:64px;flex:none;border-radius:16px;background:#F6F0E7}
+  .detail h2{margin:0;font:600 20px/1.1 ui-serif,Georgia,serif}
+  .detail .role{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .detail .close{margin-left:auto;align-self:flex-start;width:32px;padding:0;font-size:17px;line-height:1}
+  .box{margin-top:14px;padding:12px 13px;border-radius:12px;background:#F8F4ED;border:1px solid var(--line-2)}
+  .box h3{margin:0 0 5px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .box p{margin:0;word-break:break-word}
+  .box.now{background:#FFF;border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-l)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .stats div{padding:9px;border:1px solid var(--line-2);border-radius:11px;text-align:center}
+  .stats b{display:block;font:600 19px/1.1 ui-serif,Georgia,serif}
+  .stats span{font-size:11px;color:var(--muted)}
+  .log{list-style:none;margin:8px 0 0;padding:0}
+  .log li{display:grid;grid-template-columns:52px 20px 1fr;gap:6px;padding:6px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px}
+  .log time{color:var(--muted);font-variant-numeric:tabular-nums;font-size:11.5px;padding-top:1px}
+
+  /* Simulador */
+  .sim{padding:12px 14px 14px}
+  .sim form{display:flex;gap:6px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:5px}
+  .sim input{flex:1;min-width:0;height:34px;border:none;outline:none;background:transparent;font:inherit;padding:0 8px;color:var(--ink)}
+  .seg{display:flex;background:#F1ECE3;border-radius:9px;padding:2px}
+  .seg button{height:28px;border:none;background:transparent;padding:0 9px;border-radius:7px;font-size:12.5px;color:var(--muted)}
+  .seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px #0001}
+  .sim form > button{height:34px}
+  .sim small{display:block;margin-top:6px;color:var(--muted);font-size:11.5px;padding-left:4px}
+
+  /* Diálogo de ayuda */
+  dialog{border:none;border-radius:18px;padding:0;max-width:560px;width:calc(100% - 28px);box-shadow:0 30px 80px #0004;color:var(--ink)}
+  dialog::backdrop{background:#1F1E1B66;backdrop-filter:blur(2px)}
+  .dlg{padding:22px 24px 20px}
+  .dlg h2{margin:0 0 4px;font:600 22px/1.15 ui-serif,Georgia,serif}
+  .dlg > p{margin:0 0 14px;color:var(--muted)}
+  .step{display:grid;grid-template-columns:28px 1fr;gap:10px;margin:12px 0}
+  .step .n{width:26px;height:26px;border-radius:50%;background:var(--clay);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .step b{display:block}
+  .step p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
+  pre{margin:6px 0 0;padding:9px 11px;background:#1F1E1B;color:#F3EDE3;border-radius:10px;font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:auto}
+  .dlg .foot{display:flex;justify-content:flex-end;margin-top:16px}
+
+  /* ── Móvil ── */
+  @media (max-width: 900px){
+    .app{height:auto;min-height:100dvh}
+    header{padding:9px 10px;gap:6px}
+    .brand{gap:7px}
+    .brand svg{width:28px;height:28px}
+    .brand h1{font-size:17px}
+    .brand small{display:none}
+    header button,.pill{height:30px;padding:0 10px;font-size:12px}
+    .hide-sm{display:none}
+    .main{grid-template-columns:1fr}
+    .stage{height:auto;aspect-ratio:1024/660;padding:6px}
+    aside{border-left:none;border-top:1px solid var(--line)}
+    .pane{min-height:320px;max-height:none;overflow:visible}
+    .hint{left:10px;top:10px;bottom:auto;font-size:11.5px}
+  }
+  @media (max-width: 480px){
+    #connText{display:none}
+    .pill{padding:0 10px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <svg width="34" height="34" viewBox="-20 -20 40 40" aria-hidden="true"><g id="logoMark"></g></svg>
+      <div>
+        <h1>Claude Office</h1>
+        <small>Tus agentes trabajando en directo</small>
+      </div>
+    </div>
+    <div class="grow"></div>
+    <span class="pill hide-sm"><span class="stat" id="statJobs">0</span>&nbsp;tareas · <span class="stat" id="statCoffee">0</span>&nbsp;cafés</span>
+    <span class="pill" id="connPill"><span class="dot"></span><span id="connText">Conectando…</span></span>
+    <button class="toggle" id="demoBtn" aria-pressed="false" title="Genera actividad de ejemplo">Demo</button>
+    <button class="dark" id="helpBtn">Conectar</button>
+  </header>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <canvas id="office" aria-label="Oficina vista desde arriba. Pulsa sobre un agente para ver qué está haciendo."></canvas>
+      <div class="hint" id="hint">Pulsa sobre cualquier Claude para ver qué está haciendo.</div>
+    </div>
+
+    <aside>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tabTeam" aria-selected="true">Equipo</button>
+        <button class="tab" role="tab" id="tabFeed" aria-selected="false">Actividad</button>
+      </div>
+      <div class="pane" id="paneTeam"><ul class="roster" id="roster"></ul></div>
+      <div class="pane" id="paneFeed" hidden><ul class="feed" id="feed"></ul><div class="empty" id="feedEmpty">Aún no ha pasado nada.<br>Escribe a Claude y mira la oficina.</div></div>
+      <div class="pane" id="paneDetail" hidden></div>
+      <div class="sim">
+        <form id="simForm" autocomplete="off">
+          <div class="seg" role="group" aria-label="Origen">
+            <button type="button" data-src="chat" aria-pressed="true">Chat</button>
+            <button type="button" data-src="code" aria-pressed="false">Code</button>
+          </div>
+          <input id="simInput" placeholder="Prueba: «arregla el login y pasa los tests»" maxlength="200">
+          <button class="dark" type="submit">Enviar</button>
+        </form>
+        <small>Simula un prompt para ver a los agentes ponerse en marcha.</small>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<dialog id="help">
+  <div class="dlg">
+    <h2>Conecta tu Claude con la oficina</h2>
+    <p>Todo funciona en tu ordenador: nada sale de <code>localhost</code>.</p>
+    <div class="step"><span class="n">1</span><div><b>Abre la oficina con el servidor</b>
+      <p>En la carpeta del proyecto:</p><pre>node server.js</pre><p>y entra en <code>http://localhost:4747</code>.</p></div></div>
+    <div class="step"><span class="n">2</span><div><b>Claude Code → agente «Code» y su equipo</b>
+      <p>Instala los hooks una sola vez y reinicia Claude Code:</p><pre>npm run hooks:install</pre></div></div>
+    <div class="step"><span class="n">3</span><div><b>Chat de claude.ai → agente «Chat»</b>
+      <p>Instala la extensión Tampermonkey y añade el script <code>userscript/claude-office.user.js</code>. Al enviar un mensaje en claude.ai, «Chat» se pone a trabajar.</p></div></div>
+    <div class="step"><span class="n">4</span><div><b>Cualquier otra cosa (n8n, scripts…)</b>
+      <pre>curl -X POST localhost:4747/event -H "Content-Type: application/json" \
+  -d '{"source":"chat","kind":"prompt","prompt":"Hola oficina"}'</pre></div></div>
+    <div class="foot"><button class="dark" id="helpClose">Entendido</button></div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const TAU = Math.PI * 2;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const clip = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+const base = p => String(p || '').split(/[\\/]/).filter(Boolean).pop() || p || '';
+const hhmmss = ts => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const hhmm = ts => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+const now = () => performance.now() / 1000;
+const $ = s => document.querySelector(s);
+function seeded(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+
+/* =====================================================================
+   Plano de la oficina (32 × 20 casillas de 32 px)
+   ===================================================================== */
+const T = 32, COLS = 32, ROWS = 20, WW = COLS * T, WH = ROWS * T;
+const grid = Array.from({ length: ROWS }, () => new Uint8Array(COLS)); // 1 = no se puede pasar
+const blockRect = (x, y, w = 1, h = 1) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (grid[j] && i >= 0 && i < COLS) grid[j][i] = 1; };
+for (let x = 0; x < COLS; x++) { grid[0][x] = 1; grid[ROWS - 1][x] = 1; }
+for (let y = 0; y < ROWS; y++) { grid[y][0] = 1; grid[y][COLS - 1] = 1; }
+const DOOR = { x: 18, y: 19, w: 2 };
+grid[DOOR.y][DOOR.x] = 0; grid[DOOR.y][DOOR.x + 1] = 0;
+
+const WALLS = [
+  { x: 9, y: 1, w: 1, h: 7 }, { x: 1, y: 7, w: 3, h: 1 }, { x: 6, y: 7, w: 3, h: 1 },   // sala de reuniones
+  { x: 24, y: 1, w: 1, h: 7 }, { x: 25, y: 7, w: 2, h: 1 }, { x: 29, y: 7, w: 2, h: 1 }, // sala de servidores
+];
+WALLS.forEach(w => blockRect(w.x, w.y, w.w, w.h));
+
+// Mesas: fila A (silla abajo), fila B (silla arriba), fila C (silla abajo, para becarios)
+const DESKS = [];
+[[3, 4, 'down'], [7, 6, 'up'], [10, 11, 'down']].forEach(([dy, cy, chairSide], row) => {
+  [11, 14, 17, 20].forEach(dx => DESKS.push({ x: dx, y: dy, cy, chairSide, row, i: DESKS.length }));
+});
+DESKS.forEach(d => blockRect(d.x, d.y, 2, 1));
+
+const FURN = [
+  { t: 'whiteboard', x: 2, y: 1, w: 6, h: 1 },
+  { t: 'mtable', x: 3, y: 3, w: 4, h: 2 },
+  { t: 'plant', x: 8, y: 1 }, { t: 'plant', x: 1, y: 6 },
+  ...[25, 26, 27, 28, 29, 30].map(x => ({ t: 'rack', x, y: 1 })),
+  { t: 'panel', x: 30, y: 3, w: 1, h: 3 },
+  { t: 'shelf', x: 1, y: 9, w: 1, h: 4 },
+  { t: 'sofa', x: 2, y: 18, w: 4, h: 1 },
+  { t: 'armchair', x: 7, y: 15 },
+  { t: 'ctable', x: 3, y: 15, w: 2, h: 1 },
+  { t: 'plant', x: 1, y: 18 }, { t: 'plant', x: 7, y: 18 }, { t: 'plant', x: 1, y: 14 },
+  { t: 'counter', x: 24, y: 18, w: 7, h: 1 },
+  { t: 'fridge', x: 30, y: 14, w: 1, h: 2 },
+  { t: 'rtable', x: 25, y: 14, w: 2, h: 2 },
+  { t: 'cooler', x: 10, y: 18 },
+  { t: 'printer', x: 23, y: 10 },
+  { t: 'globe', x: 14, y: 18, w: 2, h: 1 },
+  { t: 'plant', x: 10, y: 1 }, { t: 'plant', x: 23, y: 1 }, { t: 'plant', x: 30, y: 9 }, { t: 'plant', x: 23, y: 13 },
+  { t: 'plant', x: 12, y: 18 }, { t: 'plant', x: 21, y: 18 },
+];
+FURN.forEach(f => blockRect(f.x, f.y, f.w || 1, f.h || 1));
+
+const tc = (tx, ty, look, extra = {}) => ({ tx, ty, px: (tx + .5) * T, py: (ty + .5) * T, look, ...extra });
+const SPOTS = {
+  coffee: [tc(26, 17, [0, 1])],
+  cooler: [tc(10, 17, [0, 1])],
+  sofa: [2, 3, 4, 5].map(x => tc(x, 17, [0, -1], { py: 18.2 * T, sit: true })),
+  armchair: [tc(6, 15, [1, 0], { px: 7.45 * T, sit: true })],
+  window: [12, 15, 19, 22].map(x => tc(x, 1, [0, -1], { py: 1.25 * T })),
+  whiteboard: [tc(4, 2, [0, -1], { px: 4.9 * T }), tc(6, 2, [0, -1])],
+  shelf: [tc(2, 10, [-1, 0]), tc(2, 11, [-1, 0]), tc(2, 12, [-1, 0])],
+  rack: [tc(27, 2, [0, -1]), tc(26, 2, [0, -1]), tc(29, 2, [0, -1])],
+  panel: [tc(29, 4, [1, 0])],
+  printer: [tc(22, 10, [1, 0])],
+  globe: [tc(14, 17, [0, 1], { px: 15 * T })],
+  fridge: [tc(29, 14, [1, 0])],
+  kitchen: [tc(24, 15, [1, 0]), tc(27, 14, [-1, 0]), tc(25, 16, [0, -1])],
+};
+const deskSpot = d => ({ tx: d.x, ty: d.cy, px: (d.x + 1) * T, py: (d.cy + .5) * T, look: [0, d.chairSide === 'down' ? -1 : 1], sit: true, desk: d });
+const doorSpot = () => ({ tx: DOOR.x, ty: DOOR.y, px: (DOOR.x + .5 + Math.random()) * T, py: WH + 18, look: [0, 1] });
+
+/* =====================================================================
+   Búsqueda de caminos (A* en 8 direcciones + suavizado)
+   ===================================================================== */
+const walkable = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS && !grid[y][x];
+function nearestWalkable(x, y) {
+  if (walkable(x, y)) return [x, y];
+  for (let r = 1; r < 6; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (walkable(x + dx, y + dy)) return [x + dx, y + dy];
+  return [x, y];
+}
+function astar(sx, sy, tx, ty) {
+  [tx, ty] = nearestWalkable(tx, ty);
+  const key = (x, y) => y * COLS + x, start = key(sx, sy), goal = key(tx, ty);
+  const g = new Map([[start, 0]]), came = new Map(), open = new Set([start]), f = new Map([[start, 0]]);
+  const h = (x, y) => { const dx = Math.abs(x - tx), dy = Math.abs(y - ty); return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy); };
+  let guard = 0;
+  while (open.size && guard++ < 4000) {
+    let cur = null, best = Infinity;
+    for (const k of open) { const v = f.get(k); if (v < best) { best = v; cur = k; } }
+    if (cur === goal) break;
+    open.delete(cur);
+    const cx = cur % COLS, cy = (cur / COLS) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = cx + dx, ny = cy + dy;
+      if (!walkable(nx, ny)) continue;
+      if (dx && dy && (!walkable(cx + dx, cy) || !walkable(cx, cy + dy))) continue;
+      const nk = key(nx, ny), ng = g.get(cur) + (dx && dy ? Math.SQRT2 : 1);
+      if (ng < (g.has(nk) ? g.get(nk) : Infinity)) { came.set(nk, cur); g.set(nk, ng); f.set(nk, ng + h(nx, ny)); open.add(nk); }
+    }
+  }
+  if (!came.has(goal) && start !== goal) return [[tx, ty]];
+  const out = []; let k = goal;
+  while (k !== start && k !== undefined) { out.push([k % COLS, (k / COLS) | 0]); k = came.get(k); }
+  return out.reverse();
+}
+function clearLine(x0, y0, x1, y1) {
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d / 5), nx = -(y1 - y0) / (d || 1), ny = (x1 - x0) / (d || 1);
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+    for (const o of [-7, 0, 7]) if (!walkable(Math.floor((x + nx * o) / T), Math.floor((y + ny * o) / T))) return false;
+  }
+  return true;
+}
+function route(x, y, spot) {
+  const sx = clamp(Math.floor(x / T), 0, COLS - 1), sy = clamp(Math.floor(y / T), 0, ROWS - 1);
+  const tiles = astar(sx, sy, spot.tx, spot.ty);
+  const pts = tiles.map(([tx, ty]) => [(tx + .5) * T, (ty + .5) * T]);
+  pts.push([spot.px, spot.py]);
+  // Suavizado: saltamos puntos intermedios si hay línea despejada
+  const out = []; let cx = x, cy = y, i = 0;
+  while (i < pts.length) {
+    let j = pts.length - 1;
+    while (j > i && !clearLine(cx, cy, pts[j][0], pts[j][1])) j--;
+    const p = pts[Math.max(i, j)]; out.push(p); cx = p[0]; cy = p[1]; i = Math.max(i, j) + 1;
+  }
+  return out;
+}
+
+/* =====================================================================
+   Agentes
+   ===================================================================== */
+const ROLES = [
+  { id: 'code',     name: 'Code',     role: 'Jefe de Claude Code · reparte el trabajo', badge: '</>', color: '#1F1E1B', desk: 0, lead: true },
+  { id: 'chat',     name: 'Chat',     role: 'Atiende tu chat de claude.ai',             badge: '💬', color: '#6A9BCC', desk: 1, lead: true, acc: 'headset' },
+  { id: 'planner',  name: 'Plan',     role: 'Planifica y lleva la lista de tareas',     badge: '📋', color: '#C9A227', desk: 2 },
+  { id: 'web',      name: 'Web',      role: 'Busca y lee páginas en internet',          badge: '🌐', color: '#4C8BB8', desk: 3 },
+  { id: 'reader',   name: 'Lector',   role: 'Lee y busca en tu código',                 badge: '📖', color: '#788C5D', desk: 4, acc: 'glasses' },
+  { id: 'editor',   name: 'Editor',   role: 'Escribe y edita archivos',                 badge: '✏️', color: '#B95F41', desk: 5 },
+  { id: 'terminal', name: 'Terminal', role: 'Ejecuta comandos en la sala de servidores', badge: '>_', color: '#2F6E45', desk: 6, acc: 'cap' },
+  { id: 'mcp',      name: 'Conector', role: 'Usa herramientas MCP (n8n, Drive, …)',     badge: '🔌', color: '#7A5EA8', desk: 7 },
+];
+const agents = [];
+const A = {};
+let becarioCount = 0;
+
+function makeAgent(def) {
+  const r = seeded([...def.id].reduce((s, c) => s * 31 + c.charCodeAt(0), 7));
+  const desk = DESKS[def.desk];
+  const sp = deskSpot(desk);
+  return {
+    ...def, deskRef: desk, x: sp.px, y: sp.py, look: sp.look.slice(), sitting: true,
+    plan: [], act: null, path: [], jobs: [], busy: false, current: null, leadJob: null, prompt: '',
+    log: [], stats: { jobs: 0, coffee: 0, walked: 0 }, status: 'idle', activity: 'En su mesa',
+    bubble: null, holding: null, idleT: rand(3, 14), rev: 0, spin: r() * TAU, walkPh: 0,
+    blinkT: rand(1, 4), blink: 0, rays: Array.from({ length: 11 }, () => .82 + r() * .22),
+    size: def.small ? 10 : 12.5,
+  };
+}
+ROLES.forEach(d => { const a = makeAgent(d); agents.push(a); A[a.id] = a; });
+
+const bump = a => { a.rev++; };
+function setActivity(a, text, status) { a.activity = text; if (status) a.status = status; bump(a); }
+function say(a, icon, text, dur = 3.2) { a.bubble = { icon, text: clip(text, 26), until: now() + dur }; }
+function addLog(a, icon, text) { a.log.unshift({ ts: Date.now(), icon, text }); if (a.log.length > 60) a.log.pop(); bump(a); }
+
+const go = (spot, label, status = 'walk') => ({ type: 'go', spot, label, status });
+const wait = (dur, label, bubble, status) => ({ type: 'wait', dur, label, bubble, status });
+const work = job => ({ type: 'work', job });
+const doit = f => ({ type: 'do', f });
+const backToDesk = (label = 'Volviendo a su mesa') => [go({ desk: null }, label), doit(a => setActivity(a, 'En su mesa', 'idle'))];
+function setPlan(a, plan) { a.plan = plan; a.act = null; a.path = []; }
+
+// Lugares ocupados para que no se pisen
+function pickSpot(name, a) {
+  const list = SPOTS[name];
+  const free = list.filter(s => !agents.some(b => b !== a && Math.hypot(b.x - s.px, b.y - s.py) < 14 || (b !== a && b.act && b.act.spot === s)));
+  return pick(free.length ? free : list);
+}
+
+function startAct(a, act) {
+  if (act.type === 'go') {
+    if (act.spot.desk === null) act.spot = deskSpot(a.deskRef);
+    a.sitting = false;
+    a.path = route(a.x, a.y, act.spot);
+    if (act.label) setActivity(a, act.label, act.status);
+  } else if (act.type === 'wait') {
+    act.t = 0;
+    if (act.label) setActivity(a, act.label, act.status);
+    if (act.bubble) say(a, act.bubble[0], act.bubble[1], Math.min(act.dur, 4));
+  } else if (act.type === 'work') {
+    act.t = 0;
+    setActivity(a, act.job.label, 'work');
+    say(a, act.job.icon, act.job.short, 3.4);
+    if (act.job.onStart) act.job.onStart(a);
+  } else if (act.type === 'do') act.f(a);
+}
+function stepAct(a, act, dt) {
+  if (act.type === 'go') {
+    const speed = (a.small ? 92 : 78) * (a.status === 'work' || a.busy ? 1.25 : 1);
+    let left = speed * dt;
+    while (left > 0 && a.path.length) {
+      const [px, py] = a.path[0], dx = px - a.x, dy = py - a.y, d = Math.hypot(dx, dy);
+      if (d > .01) a.look = [dx / d, dy / d];
+      if (d <= left) { a.x = px; a.y = py; a.path.shift(); left -= d; a.stats.walked += d; }
+      else { a.x += dx / d * left; a.y += dy / d * left; a.stats.walked += left; left = 0; }
+    }
+    a.walkPh += dt * 11; a.spin += dt * 2.4;
+    if (!a.path.length) { a.look = act.spot.look ? act.spot.look.slice() : a.look; a.sitting = !!act.spot.sit; return true; }
+    return false;
+  }
+  if (act.type === 'wait') return (act.t += dt) >= act.dur;
+  if (act.type === 'work') {
+    act.t += dt;
+    const j = act.job, min = j.min ?? (a.jobs.length > 2 ? .7 : 1.7);
+    return (j.done && act.t >= min) || act.t >= (j.max || 300);
+  }
+  return true;
+}
+
+/* ---------- Trabajos de los especialistas ---------- */
+function giveJob(a, job) {
+  a.jobs.push(job);
+  if (a.jobs.length > 10) { const old = a.jobs.shift(); old.done = true; }
+  if (!a.busy) nextJob(a);
+}
+function nextJob(a) {
+  const job = a.jobs.shift();
+  if (!job) {
+    a.busy = false; a.current = null;
+    setPlan(a, [wait(rand(.6, 1.4)), ...backToDesk()]);
+    a.idleT = rand(8, 18);
+    return;
+  }
+  a.busy = true; a.current = job;
+  const spot = job.spot === 'desk' ? deskSpot(a.deskRef) : pickSpot(job.spot, a);
+  const sameSpot = Math.hypot(a.x - spot.px, a.y - spot.py) < 4;
+  setPlan(a, [
+    ...(sameSpot ? [] : [go(spot, `Va a ${job.where || 'su puesto'}: ${job.label}`, 'work')]),
+    work(job),
+    doit(a => {
+      a.stats.jobs++; office.jobs++;
+      addLog(a, job.ok === false ? '⚠️' : '✅', job.label);
+      if (!a.jobs.length) say(a, job.ok === false ? '⚠️' : '✅', job.ok === false ? 'Ha fallado' : 'Hecho', 1.8);
+      if (job.onEnd) job.onEnd(a);
+      nextJob(a);
+    }),
+  ]);
+}
+
+/* ---------- Jefes: Code y Chat ---------- */
+function leadStart(a, prompt, quiet) {
+  if (a.leadJob && !a.leadJob.done) a.leadJob.done = true;
+  const job = { label: `Pensando en: «${clip(prompt, 90)}»`, icon: '💭', short: clip(prompt, 24), done: false, max: 3600, min: .5 };
+  a.leadJob = job; a.prompt = prompt; a.waiting = false;
+  if (!quiet) addLog(a, '💬', `Nuevo encargo: «${clip(prompt, 140)}»`);
+  setPlan(a, [go(deskSpot(a.deskRef), 'Corre a su mesa: ¡hay trabajo!', 'work'), work(job), doit(leadDone)]);
+}
+function leadDone(a) {
+  a.stats.jobs++; office.jobs++;
+  a.waiting = false;
+  say(a, '✅', '¡Listo!', 3);
+  addLog(a, '✅', 'Encargo terminado');
+  setActivity(a, 'Encargo terminado ✨', 'idle');
+  a.idleT = rand(10, 20);
+  setPlan(a, [wait(1.6), ...(Math.random() < .75 ? coffeeRun(a, 'Se ha ganado un café') : [])]);
+}
+
+/* ---------- Becarios (subagentes de Claude Code) ---------- */
+function spawnBecario(lead, ev, info) {
+  const used = new Set(agents.map(a => a.deskRef));
+  const desk = DESKS.slice(8).find(d => !used.has(d)) || pick(DESKS.slice(8));
+  const n = ++becarioCount;
+  const type = ev.detail && ev.detail.subagent_type;
+  const name = type && type !== 'general-purpose' ? type[0].toUpperCase() + type.slice(1) : `Becario ${n}`;
+  const b = makeAgent({ id: 'sub' + n + '-' + Date.now(), name, role: 'Subagente · viene, hace su parte y se va', badge: '🎓', color: '#D99A2B', desk: desk.i, small: true, temp: true });
+  b.x = (DOOR.x + .5 + Math.random()) * T; b.y = WH + 16; b.sitting = false;
+  const job = { ...info, done: false, max: 3600, id: ev.toolUseId, tool: ev.tool, source: ev.source, from: lead.name, prompt: lead.prompt };
+  b.busy = true; b.current = job;
+  addLog(b, '👋', `Llamado por ${lead.name}: ${info.label}`);
+  setPlan(b, [
+    go(deskSpot(desk), 'Entrando en la oficina', 'walk'),
+    work(job),
+    doit(b => { say(b, '👋', '¡Mi parte está!', 2.2); addLog(b, '✅', 'Trabajo entregado'); addLog(lead, '🎓', `${b.name} ha terminado`); office.jobs++; b.stats.jobs++; }),
+    wait(1.2),
+    go(doorSpot(), 'Se va a casa', 'walk'),
+    doit(b => { agents.splice(agents.indexOf(b), 1); if (selected === b) select(null); }),
+  ]);
+  agents.push(b);
+  pending.push(job);
+  sendTicket(lead, b);
+}
+
+/* ---------- Pausas y vida de oficina ---------- */
+const coffeeMachine = { brewing: 0 };
+function coffeeRun(a, label = 'Va a por un café') {
+  return [
+    go(pickSpot('coffee', a), label, 'break'),
+    doit(() => { coffeeMachine.brewing = now() + 2.8; }),
+    wait(2.8, 'Preparando café', ['☕', 'Un cafecito…'], 'break'),
+    doit(a => { a.holding = 'coffee'; a.stats.coffee++; office.coffee++; addLog(a, '☕', 'Se ha servido un café'); }),
+    go(deskSpot(a.deskRef), 'Vuelve con su café', 'break'),
+    wait(rand(5, 9), 'Tomándose el café en su mesa', null, 'break'),
+    doit(a => { a.holding = null; setActivity(a, 'En su mesa', 'idle'); }),
+  ];
+}
+const SMALLTALK = ['¿Has visto ese commit?', 'Necesito más contexto', '¿Tabs o espacios?', 'Ese bug no era mío', '¿Otro café?', 'Hoy vamos finos', '¿Quién rompió main?', 'Me encanta este prompt', 'Cero warnings 🎉', 'Refactor el viernes no', 'Mi ventana de contexto…', '¿Comemos a las 2?'];
+const THOUGHTS = ['Hmm…', '¿Y si lo refactorizo?', 'Ordenando ideas', 'Todo en verde', 'Leyendo docs', 'Aprendiendo algo nuevo', '¡Qué buen día!'];
+
+function idleBrain(a, dt) {
+  if (a.temp || a.busy || a.act || a.plan.length || (a.leadJob && !a.leadJob.done) || a.waiting) return;
+  a.idleT -= dt;
+  if (a.idleT > 0) return;
+  a.idleT = rand(12, 30);
+  const r = Math.random();
+  if (r < .28) setPlan(a, coffeeRun(a));
+  else if (r < .38) setPlan(a, [go(pickSpot('cooler', a), 'Va a por agua', 'break'), wait(3, 'Bebiendo agua', ['💧', 'Hidratarse'], 'break'), ...backToDesk()]);
+  else if (r < .50) { const s = pickSpot('sofa', a); setPlan(a, [go(s, 'Va a descansar al sofá', 'break'), wait(rand(6, 11), 'Descansando en la zona chill', ['🛋️', 'Pausa activa'], 'break'), ...backToDesk()]); }
+  else if (r < .60) setPlan(a, [go(pickSpot('window', a), 'Va a mirar por la ventana', 'break'), wait(rand(4, 7), 'Mirando por la ventana', ['🌤️', 'Qué buen día'], 'break'), ...backToDesk()]);
+  else if (r < .66) setPlan(a, [go(pickSpot('fridge', a), 'Va a la nevera', 'break'), wait(2.5, 'Buscando algo en la nevera', ['🥪', 'Merienda'], 'break'), go(pickSpot('kitchen', a), 'Merendando en la cocina', 'break'), wait(rand(5, 8), 'Merendando en la cocina', null, 'break'), ...backToDesk()]);
+  else if (r < .80) chatWithColleague(a);
+  else { say(a, '💭', pick(THOUGHTS), 2.6); a.idleT = rand(6, 14); }
+}
+function chatWithColleague(a) {
+  const others = agents.filter(b => b !== a && !b.temp && !b.busy && !b.act && !b.plan.length && b.sitting && !(b.leadJob && !b.leadJob.done) && !b.waiting);
+  if (!others.length) { say(a, '💭', pick(THOUGHTS), 2.4); return; }
+  const b = pick(others), d = b.deskRef;
+  const ty = d.cy + (d.chairSide === 'down' ? 1 : -1);
+  const spot = { tx: d.x, ty, px: b.x + rand(-6, 6), py: (ty + .5) * T, look: [0, d.chairSide === 'down' ? -1 : 1] };
+  setPlan(a, [
+    go(spot, `Va a charlar con ${b.name}`, 'break'),
+    doit(a => {
+      if (b.busy || b.act || b.plan.length) { say(a, '🤷', 'Vaya, está liado', 2); return; }
+      b.look = [0, -a.look[1]];
+      say(a, '💬', pick(SMALLTALK), 3); setActivity(a, `Charlando con ${b.name}`, 'break');
+      setPlan(b, [wait(1.6), doit(b => { say(b, '💬', pick(SMALLTALK), 3); setActivity(b, `Charlando con ${a.name}`, 'break'); }), wait(3.5), doit(b => setActivity(b, 'En su mesa', 'idle'))]);
+      addLog(a, '💬', `Ha charlado con ${b.name}`);
+    }),
+    wait(5.2),
+    ...backToDesk(),
+  ]);
+}
+
+/* =====================================================================
+   Eventos: de Claude Code / claude.ai a la oficina
+   ===================================================================== */
+const office = { jobs: 0, coffee: 0, todos: [], printing: 0 };
+const pending = [];
+const tickets = [];
+function sendTicket(from, to) { if (from !== to) tickets.push({ from, to, t: 0, dur: .75, x: from.x, y: from.y }); }
+
+function toolInfo(tool, d = {}) {
+  const t = String(tool || '');
+  const f = base(d.file_path || d.notebook_path || d.path || '');
+  if (t.startsWith('mcp__')) {
+    const [, server, ...rest] = t.split('__');
+    return { who: 'mcp', spot: 'panel', where: 'el panel de conectores', icon: '🔌', label: `MCP ${server} → ${rest.join('_')}`, short: `${server}: ${rest.join('_')}` };
+  }
+  switch (t) {
+    case 'Read': case 'NotebookRead': return { who: 'reader', spot: 'shelf', where: 'el archivo', icon: '📄', label: `Leyendo ${f || 'un archivo'}`, short: f || 'Leyendo' };
+    case 'Grep': return { who: 'reader', spot: 'shelf', where: 'el archivo', icon: '🔎', label: `Buscando «${clip(d.pattern, 50)}»${f ? ' en ' + f : ''}`, short: clip(d.pattern, 20) };
+    case 'Glob': case 'LS': return { who: 'reader', spot: 'shelf', where: 'el archivo', icon: '🗂️', label: `Buscando archivos ${clip(d.pattern || d.path || '', 50)}`, short: clip(d.pattern || f || 'archivos', 20) };
+    case 'Edit': case 'MultiEdit': case 'NotebookEdit': return { who: 'editor', spot: 'desk', where: 'su mesa', icon: '✏️', label: `Editando ${f || 'un archivo'}${d.edits ? ` (${d.edits} cambios)` : ''}`, short: f || 'Editando' };
+    case 'Write': return { who: 'editor', spot: 'printer', where: 'la impresora', icon: '🖨️', label: `Creando ${f || 'un archivo nuevo'}`, short: f || 'Archivo nuevo', onStart: () => { office.printing = now() + 2.2; } };
+    case 'Bash': case 'BashOutput': case 'KillShell': case 'KillBash': return { who: 'terminal', spot: 'rack', where: 'los servidores', icon: '⌨️', label: `Ejecutando: ${clip(d.command || d.description || t, 90)}`, short: clip(d.command || t, 22) };
+    case 'WebFetch': { let host = d.url || ''; try { host = new URL(d.url).host; } catch (_) {} return { who: 'web', spot: 'globe', where: 'el puesto web', icon: '🌐', label: `Leyendo la web ${host}`, short: host || 'Web' }; }
+    case 'WebSearch': return { who: 'web', spot: 'globe', where: 'el puesto web', icon: '🔍', label: `Buscando en internet: ${clip(d.query, 70)}`, short: clip(d.query, 22) };
+    case 'TodoWrite': case 'TaskCreate': case 'TaskUpdate':
+      return { who: 'planner', spot: 'whiteboard', where: 'la pizarra', icon: '📋', label: d.todos ? `Actualizando la lista (${d.todos.length} tareas)` : 'Actualizando la lista de tareas', short: 'Lista de tareas', onStart: () => { if (d.todos) office.todos = d.todos; } };
+    case 'ExitPlanMode': case 'EnterPlanMode': return { who: 'planner', spot: 'whiteboard', where: 'la pizarra', icon: '🗺️', label: 'Preparando el plan', short: 'El plan' };
+    case 'Task': case 'Agent': return { who: 'sub', icon: '🎓', label: `Subagente: ${clip(d.description || 'tarea delegada', 70)}`, short: clip(d.description || 'Subtarea', 22) };
+    default: return { who: 'lead', icon: '🔧', label: `Usando ${t}`, short: t };
+  }
+}
+
+function leadFor(ev) { return ev.source === 'chat' ? A.chat : A.code; }
+
+function handleEvent(ev, simulated) {
+  feedPush(ev);
+  if (ev.agent) {   // evento genérico dirigido a un agente concreto
+    const a = agents.find(x => x.id === ev.agent || x.name.toLowerCase() === String(ev.agent).toLowerCase());
+    if (a) { say(a, '💬', ev.text || ev.prompt || ev.message || '¡Hola!', 3.5); addLog(a, '💬', ev.text || ev.prompt || ev.message || 'Mensaje'); }
+    return;
+  }
+  const lead = leadFor(ev);
+  if (ev.project) lead.project = ev.project;
+  switch (ev.kind) {
+    case 'prompt': leadStart(lead, ev.prompt || '(sin texto)'); break;
+    case 'tool_start': {
+      if (!lead.leadJob || lead.leadJob.done) leadStart(lead, lead.prompt || 'Sesión en curso', true);
+      if (lead.waiting) { lead.waiting = false; lead.bubble = null; }
+      const info = toolInfo(ev.tool, ev.detail || {});
+      if (info.who === 'sub') { addLog(lead, '🎓', `Llama a un becario: ${info.label}`); setActivity(lead, `Ha llamado a un becario: ${info.short}`, 'work'); spawnBecario(lead, ev, info); break; }
+      if (info.who === 'lead') { say(lead, info.icon, info.short); addLog(lead, info.icon, info.label); setActivity(lead, info.label, 'work'); break; }
+      const target = A[info.who];
+      const job = { ...info, done: false, id: ev.toolUseId, tool: ev.tool, source: ev.source, from: lead.name, prompt: lead.prompt };
+      pending.push(job); if (pending.length > 80) pending.shift();
+      addLog(lead, '📨', `→ ${target.name}: ${info.label}`);
+      setActivity(lead, `Coordinando · ${target.name} ${info.label.charAt(0).toLowerCase() + info.label.slice(1)}`, 'work');
+      sendTicket(lead, target);
+      giveJob(target, job);
+      break;
+    }
+    case 'tool_end': {
+      const job = (ev.toolUseId && pending.find(j => j.id === ev.toolUseId)) || pending.find(j => !j.done && j.tool === ev.tool && j.source === ev.source);
+      if (job) { job.done = true; job.ok = ev.ok !== false; pending.splice(pending.indexOf(job), 1); }
+      break;
+    }
+    case 'subagent_stop': {
+      const job = pending.find(j => !j.done && (j.tool === 'Task' || j.tool === 'Agent'));
+      if (job) job.done = true;
+      break;
+    }
+    case 'stop':
+      for (let i = pending.length - 1; i >= 0; i--) if (pending[i].source === ev.source) { pending[i].done = true; pending.splice(i, 1); }
+      if (lead.leadJob && !lead.leadJob.done) lead.leadJob.done = true;
+      else if (!lead.act) { say(lead, '✅', '¡Listo!'); }
+      break;
+    case 'notify':
+      lead.waiting = true;
+      lead.bubble = { icon: '✋', text: 'Necesito tu OK', until: Infinity };
+      setActivity(lead, `Esperando tu respuesta: ${clip(ev.message || 'necesita permiso', 120)}`, 'wait');
+      addLog(lead, '✋', ev.message || 'Te está esperando');
+      break;
+    case 'session_start': say(lead, '👋', 'Nueva sesión'); addLog(lead, '👋', `Sesión iniciada${ev.project ? ' en ' + ev.project : ''}`); break;
+    case 'session_end': say(lead, '🔚', 'Sesión cerrada'); addLog(lead, '🔚', 'Sesión cerrada'); lead.waiting = false; if (lead.leadJob) lead.leadJob.done = true; break;
+    case 'message': say(lead, '💬', ev.text || ev.message || ''); addLog(lead, '💬', ev.text || ev.message || ''); break;
+  }
+}
+
+/* =====================================================================
+   Feed de actividad
+   ===================================================================== */
+const feedEl = $('#feed');
+function describe(ev) {
+  const who = ev.agent || (ev.source === 'chat' ? 'Chat' : 'Code');
+  switch (ev.kind) {
+    case 'prompt': return { icon: '💬', who, text: `Nuevo prompt: «${clip(ev.prompt, 160)}»` };
+    case 'tool_start': { const i = toolInfo(ev.tool, ev.detail || {}); const name = i.who === 'sub' ? 'Becario' : i.who === 'lead' ? who : A[i.who].name; return { icon: i.icon, who: `${who} → ${name}`, text: i.label }; }
+    case 'tool_end': return null;
+    case 'subagent_stop': return { icon: '🎓', who, text: 'Un becario ha terminado' };
+    case 'stop': return { icon: '✅', who, text: 'Respuesta terminada' };
+    case 'notify': return { icon: '✋', who, text: ev.message || 'Necesita tu atención' };
+    case 'session_start': return { icon: '👋', who, text: `Sesión iniciada${ev.project ? ' · ' + ev.project : ''}` };
+    case 'session_end': return { icon: '🔚', who, text: 'Sesión cerrada' };
+    default: return { icon: '💬', who, text: ev.text || ev.message || ev.prompt || ev.kind };
+  }
+}
+function feedPush(ev, history) {
+  const d = describe(ev); if (!d) return;
+  $('#feedEmpty').hidden = true;
+  const li = document.createElement('li');
+  if (!history) li.className = 'new';
+  const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = d.icon;
+  const body = document.createElement('div');
+  const meta = document.createElement('div'); meta.className = 'meta'; meta.textContent = `${hhmmss(ev.ts || Date.now())} · ${d.who}${ev.project ? ' · ' + ev.project : ''}`;
+  const txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = d.text;
+  body.append(meta, txt); li.append(ic, body);
+  feedEl.prepend(li);
+  while (feedEl.children.length > 120) feedEl.lastChild.remove();
+}
+
+/* =====================================================================
+   Dibujo
+   ===================================================================== */
+const canvas = $('#office'), ctx = canvas.getContext('2d');
+let view = { s: 1, ox: 0, oy: 0, dpr: 1, cw: 0, ch: 0 };
+
+function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); }
+function fillRR(c, x, y, w, h, r, fill, stroke, lw = 1) { rr(c, x, y, w, h, r); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); } }
+function shadow(c, blur = 6, oy = 2, col = 'rgba(60,40,20,.18)') { c.shadowColor = col; c.shadowBlur = blur; c.shadowOffsetY = oy; c.shadowOffsetX = 0; }
+function noShadow(c) { c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0; }
+
+/* ---------- Fondo estático (se pinta una vez) ---------- */
+const bg = document.createElement('canvas');
+function paintBackground() {
+  const S = 2; bg.width = WW * S; bg.height = WH * S;
+  const c = bg.getContext('2d'); c.scale(S, S);
+  const R = seeded(42);
+
+  // Parqué general
+  c.fillStyle = '#EAD9BF'; c.fillRect(0, 0, WW, WH);
+  for (let y = T; y < WH - T; y += 10) {
+    c.fillStyle = (y / 10) % 2 ? 'rgba(160,110,60,.05)' : 'rgba(255,255,255,.07)'; c.fillRect(T, y, WW - 2 * T, 10);
+    c.fillStyle = 'rgba(120,80,40,.10)'; c.fillRect(T, y, WW - 2 * T, .7);
+    let x = T + R() * 70; while (x < WW - T) { c.fillRect(x, y, .7, 10); x += 50 + R() * 70; }
+  }
+  // Moqueta sala de reuniones
+  c.fillStyle = '#CBD3C1'; c.fillRect(T, T, 8 * T, 6 * T);
+  c.fillStyle = 'rgba(70,90,60,.10)';
+  for (let y = T + 4; y < 7 * T; y += 8) for (let x = T + ((y / 8) % 2) * 4 + 2; x < 9 * T; x += 8) c.fillRect(x, y, 1.4, 1.4);
+  // Suelo técnico servidores
+  c.fillStyle = '#3A3E44'; c.fillRect(25 * T, T, 6 * T, 6 * T);
+  c.strokeStyle = 'rgba(255,255,255,.07)'; c.lineWidth = 1;
+  for (let x = 25 * T; x <= 31 * T; x += 16) { c.beginPath(); c.moveTo(x, T); c.lineTo(x, 7 * T); c.stroke(); }
+  for (let y = T; y <= 7 * T; y += 16) { c.beginPath(); c.moveTo(25 * T, y); c.lineTo(31 * T, y); c.stroke(); }
+  // Cocina: baldosa ajedrez
+  for (let y = 12 * T; y < 19 * T; y += 16) for (let x = 23 * T; x < 31 * T; x += 16) { c.fillStyle = ((x + y) / 16) % 2 ? '#F2ECE1' : '#E2D3BE'; c.fillRect(x, y, 16, 16); }
+  // Zona chill: alfombra
+  fillRR(c, 1.6 * T, 13.6 * T, 6.2 * T, 4 * T, 12, '#C98F72');
+  fillRR(c, 1.6 * T + 6, 13.6 * T + 6, 6.2 * T - 12, 4 * T - 12, 8, null, 'rgba(255,240,225,.55)', 2);
+  c.strokeStyle = 'rgba(255,240,225,.25)'; c.lineWidth = 1;
+  for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(4.7 * T, 15.6 * T, 14 + i * 9, 0, TAU); c.stroke(); }
+
+  // Etiquetas de zona
+  c.font = '700 8.5px ui-sans-serif,system-ui,sans-serif'; c.textAlign = 'left';
+  const label = (t, x, y, col = 'rgba(60,45,30,.38)') => { c.fillStyle = col; c.save(); c.letterSpacing = '1.6px'; c.fillText(t, x, y); c.restore(); };
+  label('SALA DE REUNIONES', 2.1 * T, 6.75 * T, 'rgba(50,70,45,.45)');
+  label('SERVIDORES', 25.25 * T, 6.75 * T, 'rgba(255,255,255,.35)');
+  label('COCINA', 27.4 * T, 12.6 * T);
+  label('ZONA CHILL', 1.25 * T, 13.4 * T);
+  label('ARCHIVO', 1.15 * T, 8.6 * T);
+  label('MESAS', 10.4 * T, 2.15 * T);
+
+  // Muro exterior con ventanas
+  c.fillStyle = '#2C2A27';
+  c.fillRect(0, 0, WW, T); c.fillRect(0, WH - T, WW, T); c.fillRect(0, 0, T, WH); c.fillRect(WW - T, 0, T, WH);
+  c.fillStyle = '#45423D';
+  c.fillRect(T - 3, T - 3, WW - 2 * T + 6, 3); c.fillRect(T - 3, WH - T, WW - 2 * T + 6, 3);
+  c.fillRect(T - 3, T - 3, 3, WH - 2 * T + 6); c.fillRect(WW - T, T - 3, 3, WH - 2 * T + 6);
+  const win = (x, y, w, h) => {
+    const g = c.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#CFE2EE'); g.addColorStop(1, '#9FC2D9');
+    fillRR(c, x, y, w, h, 2, g, '#6F6A62', 1.2);
+    c.strokeStyle = 'rgba(255,255,255,.65)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x + w * .2, y + h - 3); c.lineTo(x + w * .35, y + 3); c.stroke();
+  };
+  for (const x of [11, 14.5, 18, 21]) win(x * T, 9, 2.6 * T, 14);
+  for (const x of [2.5, 5.5]) win(x * T, 9, 1.6 * T, 14);
+  for (const y of [12.6, 15.6]) win(WW - T + 9, y * T, 14, 2.2 * T);
+  for (const y of [2.6, 9.5, 14.8]) win(9, y * T, 14, 1.8 * T);
+  // Puerta de entrada
+  c.fillStyle = '#EAD9BF'; c.fillRect(DOOR.x * T, WH - T, DOOR.w * T, T);
+  fillRR(c, DOOR.x * T + 6, WH - T + 6, DOOR.w * T - 12, T - 10, 4, '#8C8073');
+  c.fillStyle = 'rgba(255,255,255,.18)'; for (let i = 0; i < 9; i++) c.fillRect(DOOR.x * T + 10 + i * 5.5, WH - T + 9, 1.5, T - 16);
+  c.strokeStyle = 'rgba(255,255,255,.35)'; c.setLineDash([3, 3]); c.lineWidth = 1;
+  c.beginPath(); c.arc(DOOR.x * T, WH - T, DOOR.w * T * .5, 0, -Math.PI / 2, true); c.stroke(); c.setLineDash([]);
+
+  // Tabiques interiores
+  for (const w of WALLS) {
+    const horiz = w.w > w.h, th = 10;
+    const x = horiz ? w.x * T : w.x * T + (T - th) / 2, y = horiz ? w.y * T + (T - th) / 2 : w.y * T;
+    const ww = horiz ? w.w * T : th, hh = horiz ? th : w.h * T;
+    shadow(c, 4, 2, 'rgba(0,0,0,.25)'); fillRR(c, x, y, ww, hh, 2, '#3A3733'); noShadow(c);
+    c.fillStyle = '#56524C'; c.fillRect(x + 1, y + 1, ww - 2, 2.5);
+  }
+
+  // Sillas de las mesas
+  for (const d of DESKS) {
+    const sp = deskSpot(d), back = d.chairSide === 'down' ? 1 : -1;
+    shadow(c, 3, 1.5); c.fillStyle = '#4A4844'; c.beginPath(); c.arc(sp.px, sp.py + back * 2, 10.5, 0, TAU); c.fill(); noShadow(c);
+    c.fillStyle = '#5C5A55'; c.beginPath(); c.arc(sp.px, sp.py + back * 2, 8.5, 0, TAU); c.fill();
+    c.strokeStyle = '#2F2E2B'; c.lineWidth = 4; c.lineCap = 'round';
+    c.beginPath(); c.arc(sp.px, sp.py + back * 2, 11, back > 0 ? .25 * Math.PI : 1.25 * Math.PI, back > 0 ? .75 * Math.PI : 1.75 * Math.PI); c.stroke();
+  }
+  // Mesas
+  for (const d of DESKS) {
+    const x = d.x * T + 2, y = d.y * T + 3, w = 2 * T - 4, h = T - 6;
+    shadow(c, 6, 3); fillRR(c, x, y, w, h, 4, '#F6F1E7', '#CDBEA4'); noShadow(c);
+    const near = d.chairSide === 'down' ? y + h - 8 : y + 3;
+    fillRR(c, x + w / 2 - 11, near, 22, 5, 1.5, '#D9D2C5', '#B9B0A0', .7); // teclado
+    fillRR(c, x + w / 2 + 15, near, 4, 5, 2, '#CFC7B9');                  // ratón
+    const r = seeded(d.i * 97 + 3);
+    const side = r() > .5 ? x + 7 : x + w - 9, mid = y + h / 2;
+    if (d.i < 8) {
+      if (r() > .4) { c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(side, mid, 3.4, 0, TAU); c.fill(); c.strokeStyle = '#B9B0A0'; c.lineWidth = .8; c.stroke(); c.fillStyle = '#7A5236'; c.beginPath(); c.arc(side, mid, 2.2, 0, TAU); c.fill(); }
+      else { c.fillStyle = '#7D9466'; for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(side + Math.cos(k * 1.3) * 2.6, mid + Math.sin(k * 1.3) * 2.6, 2.4, 0, TAU); c.fill(); } }
+    }
+  }
+  // Resto de muebles
+  for (const f of FURN) drawFurniture(c, f, R);
+}
+
+function drawPlant(c, cx, cy, s = 1) {
+  shadow(c, 4, 2); c.fillStyle = '#B9876A'; c.beginPath(); c.arc(cx, cy + 3 * s, 8 * s, 0, TAU); c.fill(); noShadow(c);
+  c.fillStyle = '#9E6E52'; c.beginPath(); c.arc(cx, cy + 3 * s, 6 * s, 0, TAU); c.fill();
+  const leaves = ['#5F7B48', '#738F58', '#89A46B'];
+  for (let i = 0; i < 9; i++) {
+    const a = i / 9 * TAU, d = (i % 3 + 4) * s;
+    c.fillStyle = leaves[i % 3];
+    c.beginPath(); c.ellipse(cx + Math.cos(a) * d, cy + Math.sin(a) * d - 1, 5.5 * s, 3.2 * s, a, 0, TAU); c.fill();
+  }
+  c.fillStyle = '#9DB87C'; c.beginPath(); c.arc(cx, cy - 1, 3.2 * s, 0, TAU); c.fill();
+}
+
+function drawFurniture(c, f, R) {
+  const x = f.x * T, y = f.y * T, w = (f.w || 1) * T, h = (f.h || 1) * T;
+  switch (f.t) {
+    case 'whiteboard':
+      shadow(c, 4, 2); fillRR(c, x + 4, y + 2, w - 8, 14, 3, '#FFFFFF', '#9C978E', 1.2); noShadow(c);
+      c.fillStyle = '#B9B3A8'; c.fillRect(x + 10, y + 16, w - 20, 3);
+      break;
+    case 'mtable': {
+      // sillas alrededor
+      c.fillStyle = '#7C8A6C';
+      for (const [cx, cy] of [[2.55, 3.5], [2.55, 4.5], [7.45, 3.5], [7.45, 4.5], [4, 5.45], [5.6, 5.45], [4, 2.55], [6, 2.55]]) { c.beginPath(); c.arc(cx * T, cy * T, 8, 0, TAU); c.fill(); }
+      shadow(c, 8, 3); fillRR(c, x + 2, y + 4, w - 4, h - 8, 26, '#B98B62', '#8E6847', 1.2); noShadow(c);
+      c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1;
+      for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(x + 20, y + 4 + i * (h - 8) / 6); c.lineTo(x + w - 20, y + 4 + i * (h - 8) / 6); c.stroke(); }
+      fillRR(c, x + w / 2 - 14, y + h / 2 - 8, 28, 16, 3, '#2E2D2A'); // portátil
+      c.fillStyle = '#E9E2D4'; c.fillRect(x + w / 2 + 22, y + h / 2 - 4, 9, 11); c.fillRect(x + 18, y + h / 2 - 2, 10, 7);
+      break;
+    }
+    case 'rack':
+      shadow(c, 4, 2, 'rgba(0,0,0,.4)'); fillRR(c, x + 3, y + 2, T - 6, T - 3, 3, '#17181A', '#55595E', 1); noShadow(c);
+      for (let i = 0; i < 5; i++) { c.fillStyle = '#26282B'; c.fillRect(x + 6, y + 5 + i * 5, T - 12, 3.5); }
+      break;
+    case 'panel':
+      shadow(c, 4, 2, 'rgba(0,0,0,.4)'); fillRR(c, x + 5, y + 4, T - 9, h - 8, 3, '#5B5F66', '#8C9198', 1); noShadow(c);
+      break;
+    case 'shelf': {
+      shadow(c, 5, 2); fillRR(c, x + 2, y + 2, T - 6, h - 4, 3, '#8A6142', '#5E412C', 1); noShadow(c);
+      const cols = ['#C9573F', '#6A9BCC', '#788C5D', '#D99A2B', '#E8E1D3', '#7A5EA8', '#3B3934'];
+      for (let yy = y + 5; yy < y + h - 6; yy += 4.5) {
+        let xx = x + 5; while (xx < x + T - 9) { const bw = 2 + R() * 3; c.fillStyle = pick(cols); c.fillRect(xx, yy, bw, 3.3); xx += bw + .6; }
+      }
+      break;
+    }
+    case 'sofa':
+      shadow(c, 6, -2); fillRR(c, x + 1, y + 3, w - 2, T - 6, 8, '#6E7F57'); noShadow(c);
+      fillRR(c, x + 1, y + 14, w - 2, T - 17, 6, '#5C6C47');
+      for (let i = 0; i < 3; i++) fillRR(c, x + 6 + i * (w - 12) / 3, y + 5, (w - 12) / 3 - 3, 13, 5, '#82946A');
+      fillRR(c, x + 14, y + 7, 9, 8, 3, '#E2B35A'); fillRR(c, x + w - 26, y + 7, 9, 8, 3, '#D97757');
+      break;
+    case 'armchair':
+      shadow(c, 5, 2); fillRR(c, x + 4, y + 3, T - 6, T - 6, 8, '#6E7F57'); noShadow(c);
+      fillRR(c, x + 6, y + 7, T - 14, T - 14, 5, '#82946A');
+      break;
+    case 'ctable':
+      shadow(c, 5, 2); fillRR(c, x + 4, y + 6, w - 8, h - 12, 6, '#5B4636'); noShadow(c);
+      c.fillStyle = '#E9E2D4'; c.fillRect(x + 12, y + 11, 12, 9); c.fillStyle = '#C9573F'; c.fillRect(x + 32, y + 12, 10, 7);
+      break;
+    case 'plant': drawPlant(c, x + T / 2, y + T / 2); break;
+    case 'counter':
+      shadow(c, 5, -2); fillRR(c, x, y + 4, w, T - 4, 3, '#E9E3D8', '#BDB3A3'); noShadow(c);
+      // fregadero
+      fillRR(c, 28.6 * T, y + 8, 26, 18, 4, '#C9CDD1', '#9EA4AA'); fillRR(c, 28.6 * T + 3, y + 11, 20, 12, 3, '#B0B6BC');
+      // cafetera
+      fillRR(c, 25.8 * T, y + 6, 26, 22, 4, '#2A2827'); fillRR(c, 25.8 * T + 4, y + 9, 18, 8, 2, '#4B4744');
+      c.fillStyle = '#D97757'; c.beginPath(); c.arc(25.8 * T + 20, y + 22, 2, 0, TAU); c.fill();
+      // tazas
+      for (let i = 0; i < 3; i++) { c.fillStyle = ['#FFFFFF', '#D97757', '#6A9BCC'][i]; c.beginPath(); c.arc(24.5 * T + i * 9, y + 16, 3.5, 0, TAU); c.fill(); c.strokeStyle = '#9E968A'; c.lineWidth = .7; c.stroke(); }
+      // frutero
+      c.fillStyle = '#C9B38E'; c.beginPath(); c.arc(30.3 * T, y + 16, 7, 0, TAU); c.fill();
+      for (const [dx, dy, col] of [[-2, -2, '#E2B35A'], [2, 1, '#C9573F'], [-1, 2, '#88A35E']]) { c.fillStyle = col; c.beginPath(); c.arc(30.3 * T + dx, y + 16 + dy, 2.6, 0, TAU); c.fill(); }
+      break;
+    case 'fridge':
+      shadow(c, 5, 2); fillRR(c, x + 3, y + 2, T - 5, h - 4, 4, '#F4F5F6', '#A8AEB4', 1.2); noShadow(c);
+      c.fillStyle = '#A8AEB4'; c.fillRect(x + 4, y + h * .4, T - 7, 1); c.fillRect(x + 7, y + 8, 2, 12); c.fillRect(x + 7, y + h * .4 + 6, 2, 16);
+      break;
+    case 'rtable':
+      c.fillStyle = '#8D7B67'; for (const [cx, cy] of [[24.6, 15], [27.4, 15], [26, 13.6], [26, 16.4]]) { c.beginPath(); c.arc(cx * T, cy * T, 7, 0, TAU); c.fill(); }
+      shadow(c, 6, 3); c.fillStyle = '#F5F0E6'; c.beginPath(); c.arc(x + T, y + T, T - 6, 0, TAU); c.fill(); noShadow(c);
+      c.strokeStyle = '#CDBEA4'; c.lineWidth = 1; c.stroke();
+      c.fillStyle = '#788C5D'; c.beginPath(); c.arc(x + T, y + T, 4, 0, TAU); c.fill();
+      break;
+    case 'cooler':
+      shadow(c, 4, 2); fillRR(c, x + 7, y + 7, T - 14, T - 12, 3, '#ECEEF0', '#A8AEB4'); noShadow(c);
+      c.fillStyle = 'rgba(106,155,204,.75)'; c.beginPath(); c.arc(x + T / 2, y + T / 2, 7, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.arc(x + T / 2 - 2, y + T / 2 - 2, 2.5, 0, TAU); c.fill();
+      break;
+    case 'printer':
+      shadow(c, 4, 2); fillRR(c, x + 4, y + 5, T - 8, T - 9, 3, '#D6D3CD', '#9A958C'); noShadow(c);
+      fillRR(c, x + 8, y + 8, T - 16, 6, 1, '#4A4844');
+      break;
+    case 'globe':
+      shadow(c, 6, -2); fillRR(c, x + 2, y + 5, w - 4, T - 7, 4, '#F6F1E7', '#CDBEA4'); noShadow(c);
+      c.fillStyle = '#C9B38E'; c.beginPath(); c.arc(x + 12, y + 17, 7, 0, TAU); c.fill();
+      c.fillStyle = '#6A9BCC'; c.beginPath(); c.arc(x + 12, y + 17, 5.5, 0, TAU); c.fill();
+      c.fillStyle = '#88A35E'; c.beginPath(); c.ellipse(x + 10, y + 15, 2.5, 1.6, .4, 0, TAU); c.fill(); c.beginPath(); c.ellipse(x + 14, y + 19, 2, 1.3, -.3, 0, TAU); c.fill();
+      break;
+  }
+}
+
+/* ---------- Partes dinámicas del mobiliario ---------- */
+function drawDynamic(t) {
+  // Monitores
+  for (const d of DESKS) {
+    const owner = agents.find(a => a.deskRef === d && Math.hypot(a.x - deskSpot(d).px, a.y - deskSpot(d).py) < 6);
+    const x = d.x * T + T - 14, w = 28, h = 12;
+    const y = d.chairSide === 'down' ? d.y * T + 4 : d.y * T + T - 4 - h;
+    fillRR(ctx, x - 1.5, y - 1.5, w + 3, h + 3, 2.5, '#26241F');
+    let scr = '#3A3833';
+    if (owner) scr = owner.status === 'work' ? '#17212B' : '#2C3A47';
+    fillRR(ctx, x, y, w, h, 1.5, scr);
+    if (owner && owner.status === 'work') {
+      const cols = ['#D97757', '#8FB3D9', '#9DB87C', '#E2B35A', '#C8C2B5'];
+      ctx.save(); rr(ctx, x, y, w, h, 1.5); ctx.clip();
+      const off = (t * 9 + d.i * 3) % 3;
+      for (let i = -1; i < 5; i++) {
+        const ly = y + 2 + i * 3 - off; const r = seeded(d.i * 31 + Math.floor(t * 3 - i) * 7);
+        ctx.fillStyle = cols[Math.floor(r() * cols.length)]; ctx.fillRect(x + 2 + (r() * 4 | 0) * 2, ly, 5 + r() * 15, 1.5);
+      }
+      ctx.restore();
+    } else if (owner) {
+      ctx.fillStyle = '#5E7487'; ctx.fillRect(x + 3, y + 3, 10, 6); ctx.fillStyle = '#7F95A8'; ctx.fillRect(x + 15, y + 3, 10, 2); ctx.fillRect(x + 15, y + 7, 7, 2);
+    }
+  }
+  // LEDs de los servidores
+  const termWorking = A.terminal.status === 'work' && A.terminal.x > 25 * T;
+  for (let rx = 25; rx <= 30; rx++) for (let i = 0; i < 5; i++) {
+    const on = Math.sin(t * (termWorking ? 14 : 3) + rx * 7.3 + i * 3.1) > (termWorking ? -.2 : .45);
+    ctx.fillStyle = on ? (i % 3 === 0 ? '#E2B35A' : '#7ED38F') : '#2C3A30';
+    ctx.fillRect(rx * T + 8, T + 6 + i * 5, 2.2, 1.6);
+    ctx.fillStyle = on && termWorking ? '#7ED38F' : '#2C3A30'; ctx.fillRect(rx * T + 12, T + 6 + i * 5, 2.2, 1.6);
+  }
+  // Panel de conectores MCP
+  const mcpOn = A.mcp.status === 'work' && A.mcp.x > 25 * T;
+  const plugCols = ['#D97757', '#6A9BCC', '#9DB87C', '#E2B35A', '#B596E0'];
+  for (let i = 0; i < 6; i++) {
+    const px = 30 * T + 10 + (i % 2) * 8, py = 3 * T + 10 + Math.floor(i / 2) * 22;
+    ctx.fillStyle = '#2C2E31'; ctx.beginPath(); ctx.arc(px, py, 3.2, 0, TAU); ctx.fill();
+    const glow = mcpOn && Math.sin(t * 8 + i) > 0;
+    ctx.fillStyle = glow ? plugCols[i % 5] : '#4A4D52'; ctx.beginPath(); ctx.arc(px, py, 2, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle = mcpOn ? 'rgba(217,119,87,.9)' : 'rgba(217,119,87,.45)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(30 * T + 10, 3 * T + 10); ctx.bezierCurveTo(29.4 * T, 2.8 * T, 29.4 * T, 2.2 * T, 29.5 * T, 1.9 * T); ctx.stroke();
+  ctx.strokeStyle = mcpOn ? 'rgba(106,155,204,.9)' : 'rgba(106,155,204,.45)';
+  ctx.beginPath(); ctx.moveTo(30 * T + 18, 4.2 * T); ctx.bezierCurveTo(29.6 * T, 4.4 * T, 30.2 * T, 3 * T, 30.5 * T, 1.9 * T); ctx.stroke();
+
+  // Pizarra: lista de tareas de Claude Code
+  const wbX = 2 * T + 8, wbY = T + 4;
+  ctx.font = '600 4.6px ui-sans-serif,system-ui,sans-serif'; ctx.textAlign = 'left';
+  const todos = office.todos.length ? office.todos : [{ content: 'Plan del día', status: 'completed' }, { content: 'Revisar PRs', status: 'in_progress' }, { content: 'Más café', status: 'pending' }];
+  todos.slice(0, 4).forEach((td, i) => {
+    const col = i < 2 ? 0 : 1, row = i % 2, tx = wbX + col * 92, ty = wbY + 4 + row * 5.2;
+    ctx.fillStyle = td.status === 'completed' ? '#4F9A68' : td.status === 'in_progress' ? '#D97757' : '#8C877E';
+    ctx.fillText(td.status === 'completed' ? '✓' : td.status === 'in_progress' ? '▸' : '○', tx, ty + 1.5);
+    ctx.fillStyle = '#3B3934'; ctx.fillText(clip(td.content, 30), tx + 5, ty + 1.5);
+  });
+  // Café humeante
+  if (coffeeMachine.brewing > now()) steam(25.8 * T + 13, 18 * T + 6, t);
+  // Impresora sacando papel
+  if (office.printing > now()) {
+    const p = 1 - (office.printing - now()) / 2.2;
+    fillRR(ctx, 23 * T + 9, 10 * T + 14 + p * 12, 14, 9, 1, '#FFFFFF', '#CFC7B9', .7);
+    ctx.fillStyle = '#B9B0A0'; for (let i = 0; i < 3; i++) ctx.fillRect(23 * T + 11, 10 * T + 16 + p * 12 + i * 2.2, 9, .7);
+  }
+  // Puesto web: pantalla girando
+  const webOn = A.web.status === 'work' && A.web.y > 16 * T;
+  fillRR(ctx, 14 * T + 26, 18 * T + 8, 30, 15, 2, '#26241F');
+  fillRR(ctx, 14 * T + 28, 18 * T + 10, 26, 11, 1.5, webOn ? '#1C2A38' : '#3A3833');
+  if (webOn) { ctx.fillStyle = '#8FB3D9'; ctx.fillRect(14 * T + 30, 18 * T + 12, 22 * ((t * .7) % 1), 2); ctx.fillStyle = '#C8C2B5'; ctx.fillRect(14 * T + 30, 18 * T + 16, 16, 1.5); ctx.fillRect(14 * T + 30, 18 * T + 18.5, 12, 1.5); }
+}
+function steam(x, y, t) {
+  ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const ph = (t * 1.6 + i * .33) % 1;
+    ctx.globalAlpha = 1 - ph;
+    ctx.beginPath(); const bx = x + (i - 1) * 4, by = y - ph * 14;
+    ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + 3 * Math.sin(t * 5 + i), by - 4, bx, by - 8); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- El muñeco Claude ---------- */
+function burst(c, r, rays, rot) {
+  const n = rays.length; c.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a0 = rot + i / n * TAU, a1 = a0 + TAU / n / 2;
+    const ro = r * rays[i], ri = r * .44;
+    i ? c.lineTo(Math.cos(a0) * ro, Math.sin(a0) * ro) : c.moveTo(Math.cos(a0) * ro, Math.sin(a0) * ro);
+    c.lineTo(Math.cos(a1) * ri, Math.sin(a1) * ri);
+  }
+  c.closePath();
+}
+function drawClaude(c, a, t, opts = {}) {
+  const r = opts.r || a.size;
+  const moving = a.path && a.path.length > 0 && !opts.static;
+  const working = a.status === 'work' && !moving && !opts.static;
+  const bob = moving ? Math.abs(Math.sin(a.walkPh)) * 2.2 : working ? Math.sin(t * 18) * .5 : Math.sin(t * 2 + a.spin) * .6;
+  const rot = opts.static ? -.15 : a.spin + (moving ? 0 : working ? Math.sin(t * 9) * .06 : Math.sin(t * .8 + a.spin) * .05);
+  const lx = a.look[0], ly = a.look[1];
+  c.save();
+  c.translate(a.x, a.y);
+  // sombra
+  c.fillStyle = 'rgba(40,25,10,.20)';
+  c.beginPath(); c.ellipse(1.5, r * .78, r * .95 - bob * .2, r * .38, 0, 0, TAU); c.fill();
+  c.translate(0, -bob - (a.sitting ? 1 : 3));
+  // pies
+  if (!a.sitting) {
+    const sw = moving ? Math.sin(a.walkPh) * 3 : 0;
+    c.fillStyle = '#9C4F35';
+    c.beginPath(); c.ellipse(-r * .42, r * .72 + sw, r * .22, r * .16, 0, 0, TAU); c.fill();
+    c.beginPath(); c.ellipse(r * .42, r * .72 - sw, r * .22, r * .16, 0, 0, TAU); c.fill();
+  }
+  // cuerpo (estrella de Claude)
+  c.save(); c.rotate(rot);
+  c.lineJoin = 'round';
+  burst(c, r, a.rays, 0);
+  c.fillStyle = a.temp ? '#E39072' : '#D97757'; c.strokeStyle = a.temp ? '#E39072' : '#D97757'; c.lineWidth = r * .2;
+  c.fill(); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.13)'; burst(c, r * .62, a.rays, .1); c.fill();
+  c.restore();
+  // centro
+  c.fillStyle = a.temp ? '#E39072' : '#D97757'; c.beginPath(); c.arc(0, 0, r * .5, 0, TAU); c.fill();
+  // ojos
+  const blink = a.blink > 0 ? .18 : 1;
+  const ex = lx * 1.4, ey = ly * 1.1 - r * .06;
+  c.fillStyle = '#2A1A12';
+  for (const s of [-1, 1]) { c.beginPath(); c.ellipse(s * r * .2 + ex, ey, r * .085, r * .14 * blink, 0, 0, TAU); c.fill(); }
+  if (blink === 1) { c.fillStyle = 'rgba(255,255,255,.85)'; for (const s of [-1, 1]) { c.beginPath(); c.arc(s * r * .2 + ex + r * .03, ey - r * .05, r * .03, 0, TAU); c.fill(); } }
+  // mejillas
+  c.fillStyle = 'rgba(255,170,150,.55)';
+  for (const s of [-1, 1]) { c.beginPath(); c.ellipse(s * r * .36 + ex * .5, ey + r * .16, r * .08, r * .05, 0, 0, TAU); c.fill(); }
+  // accesorios
+  if (a.acc === 'glasses') {
+    c.strokeStyle = '#2A1A12'; c.lineWidth = .9;
+    for (const s of [-1, 1]) { c.beginPath(); c.arc(s * r * .2 + ex, ey, r * .16, 0, TAU); c.stroke(); }
+    c.beginPath(); c.moveTo(-r * .05 + ex, ey); c.lineTo(r * .05 + ex, ey); c.stroke();
+  } else if (a.acc === 'headset') {
+    c.strokeStyle = '#2E2D2A'; c.lineWidth = 1.8;
+    c.beginPath(); c.arc(0, 0, r * .62, Math.PI * 1.08, Math.PI * 1.92); c.stroke();
+    c.fillStyle = '#2E2D2A'; for (const s of [-1, 1]) { c.beginPath(); c.arc(s * r * .6, -r * .12, r * .13, 0, TAU); c.fill(); }
+    c.lineWidth = 1; c.beginPath(); c.moveTo(-r * .6, -r * .05); c.quadraticCurveTo(-r * .5, r * .32, -r * .15, r * .3); c.stroke();
+  } else if (a.acc === 'cap') {
+    c.fillStyle = '#2F6E45'; c.beginPath(); c.ellipse(0, -r * .36, r * .42, r * .2, 0, Math.PI, TAU); c.fill();
+    c.fillRect(-r * .42, -r * .37, r * .84, r * .06);
+  }
+  // manos trabajando
+  if (working) {
+    c.fillStyle = '#B95F41';
+    const k = Math.sin(t * 22) > 0;
+    c.beginPath(); c.arc(lx * r * .85 - ly * r * .38, ly * r * .85 + lx * r * .38 + (k ? -1 : 0), r * .16, 0, TAU); c.fill();
+    c.beginPath(); c.arc(lx * r * .85 + ly * r * .38, ly * r * .85 - lx * r * .38 + (k ? 0 : -1), r * .16, 0, TAU); c.fill();
+  }
+  // taza de café
+  if (a.holding === 'coffee') {
+    const hx = r * .95, hy = r * .25;
+    c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(hx, hy, r * .3, 0, TAU); c.fill();
+    c.strokeStyle = '#B9B0A0'; c.lineWidth = .8; c.stroke();
+    c.fillStyle = '#6B4329'; c.beginPath(); c.arc(hx, hy, r * .2, 0, TAU); c.fill();
+    if (!opts.static) { c.restore(); c.save(); steamMini(a.x + hx, a.y + hy - r * .4 - bob, t); }
+  }
+  c.restore();
+  // chapa
+  if (!opts.noBadge) {
+    const bx = a.x + r * .78, by = a.y - bob + r * .42 - (a.sitting ? 1 : 3);
+    c.fillStyle = a.color; c.beginPath(); c.arc(bx, by, r * .4, 0, TAU); c.fill();
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = 1.3; c.stroke();
+    c.fillStyle = '#FFFFFF'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `700 ${a.badge.length > 1 && !/\p{Extended_Pictographic}/u.test(a.badge) ? r * .32 : r * .42}px ui-monospace,system-ui,sans-serif`;
+    c.fillText(a.badge, bx, by + .5);
+    c.textBaseline = 'alphabetic';
+  }
+}
+function steamMini(x, y, t) {
+  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+  for (let i = 0; i < 2; i++) { const ph = (t * 1.2 + i * .5) % 1; ctx.globalAlpha = 1 - ph; ctx.beginPath(); ctx.moveTo(x + i * 2 - 1, y - ph * 8); ctx.quadraticCurveTo(x + i * 2 + 1.5, y - ph * 8 - 3, x + i * 2 - 1, y - ph * 8 - 6); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+}
+
+function drawLabel(a, t, hot) {
+  const r = a.size, y = a.y + r + 9 - (a.sitting ? 0 : 2);
+  ctx.font = `${hot ? 700 : 600} 9.5px ui-sans-serif,system-ui,sans-serif`; ctx.textAlign = 'center';
+  const w = ctx.measureText(a.name).width + 16;
+  fillRR(ctx, a.x - w / 2, y - 8, w, 13, 6.5, hot ? '#1F1E1B' : 'rgba(255,253,248,.92)', hot ? null : 'rgba(0,0,0,.08)');
+  const col = { work: '#4F9A68', walk: '#6A9BCC', break: '#D99A2B', wait: '#C9573F', idle: '#B9B2A6' }[a.status] || '#B9B2A6';
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(a.x - w / 2 + 6.5, y - 1.5, 2.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = hot ? '#FFFFFF' : '#2B2A27'; ctx.fillText(a.name, a.x + 3, y + 2);
+}
+function drawBubble(a, t) {
+  const b = a.bubble; if (!b || b.until < now()) return;
+  const left = b.until - now(), alpha = Math.min(1, left * 3, (b.until === Infinity ? 1 : 9));
+  ctx.globalAlpha = alpha;
+  ctx.font = '600 10.5px ui-sans-serif,system-ui,sans-serif'; ctx.textAlign = 'left';
+  const text = b.text ? `${b.icon} ${b.text}` : b.icon;
+  const w = ctx.measureText(text).width + 14, h = 19;
+  const pop = b.until === Infinity ? Math.sin(t * 6) * 1.5 : 0;
+  const bx = clamp(a.x - w / 2, 4, WW - w - 4), by = a.y - a.size - 30 + pop;
+  shadow(ctx, 6, 2, 'rgba(0,0,0,.15)');
+  fillRR(ctx, bx, by, w, h, 9, b.icon === '✋' ? '#FFF1EC' : '#FFFFFF', b.icon === '✋' ? '#C9573F' : 'rgba(31,30,27,.18)', 1);
+  noShadow(ctx);
+  ctx.fillStyle = b.icon === '✋' ? '#FFF1EC' : '#FFFFFF';
+  ctx.beginPath(); ctx.moveTo(clamp(a.x, bx + 8, bx + w - 8) - 4, by + h - .5); ctx.lineTo(clamp(a.x, bx + 8, bx + w - 8), by + h + 5); ctx.lineTo(clamp(a.x, bx + 8, bx + w - 8) + 4, by + h - .5); ctx.fill();
+  ctx.fillStyle = '#1F1E1B'; ctx.fillText(text, bx + 7, by + 13);
+  ctx.globalAlpha = 1;
+}
+function drawSelection(a, t) {
+  const r = a.size * 1.75;
+  ctx.save(); ctx.translate(a.x, a.y - (a.sitting ? 1 : 3));
+  ctx.strokeStyle = '#D97757'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.lineDashOffset = -t * 18;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(217,119,87,.10)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+function drawTickets(dt) {
+  for (let i = tickets.length - 1; i >= 0; i--) {
+    const k = tickets[i]; k.t += dt;
+    const p = Math.min(1, k.t / k.dur), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    const x = k.x + (k.to.x - k.x) * e, y = k.y + (k.to.y - k.y) * e - Math.sin(p * Math.PI) * 40;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(p * 10) * .4);
+    shadow(ctx, 4, 2, 'rgba(0,0,0,.2)'); fillRR(ctx, -5, -6.5, 10, 13, 1.5, '#FFFFFF', '#CFC7B9', .7); noShadow(ctx);
+    ctx.fillStyle = '#D97757'; ctx.fillRect(-3, -4, 6, 1.6); ctx.fillStyle = '#B9B0A0'; ctx.fillRect(-3, -1, 6, 1); ctx.fillRect(-3, 1.5, 4, 1);
+    ctx.restore();
+    if (p >= 1) tickets.splice(i, 1);
+  }
+}
+
+/* =====================================================================
+   Bucle principal
+   ===================================================================== */
+let selected = null, hover = null, lastT = now();
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  view.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  view.cw = rect.width; view.ch = rect.height;
+  canvas.width = Math.round(rect.width * view.dpr); canvas.height = Math.round(rect.height * view.dpr);
+  view.s = Math.min(rect.width / WW, rect.height / WH);
+  view.ox = (rect.width - WW * view.s) / 2; view.oy = (rect.height - WH * view.s) / 2;
+}
+new ResizeObserver(resize).observe(canvas);
+
+function frame() {
+  const t = now(), dt = Math.min(.05, t - lastT); lastT = t;
+  for (const a of agents.slice()) {
+    if (!a.act && a.plan.length) { a.act = a.plan.shift(); startAct(a, a.act); }
+    if (a.act && stepAct(a, a.act, dt)) a.act = null;
+    if (!a.act && !a.plan.length) { if (!a.path.length && a.status === 'walk') setActivity(a, a.activity, 'idle'); idleBrain(a, dt); }
+    a.blinkT -= dt; if (a.blinkT <= 0) { a.blink = .12; a.blinkT = rand(2, 5); } if (a.blink > 0) a.blink -= dt;
+  }
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(view.dpr * view.s, 0, 0, view.dpr * view.s, view.dpr * view.ox, view.dpr * view.oy);
+  // marco
+  shadow(ctx, 30, 10, 'rgba(60,40,20,.22)'); fillRR(ctx, 0, 0, WW, WH, 10, '#2C2A27'); noShadow(ctx);
+  ctx.save(); rr(ctx, 0, 0, WW, WH, 10); ctx.clip();
+  ctx.drawImage(bg, 0, 0, WW, WH);
+  drawDynamic(t);
+  if (selected) drawSelection(selected, t);
+  const sorted = agents.slice().sort((p, q) => p.y - q.y);
+  for (const a of sorted) drawClaude(ctx, a, t);
+  drawTickets(dt);
+  for (const a of sorted) drawLabel(a, t, a === selected || a === hover);
+  for (const a of sorted) drawBubble(a, t);
+  ctx.restore();
+
+  updateUI();
+  requestAnimationFrame(frame);
+}
+
+/* =====================================================================
+   Interacción
+   ===================================================================== */
+function agentAt(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const wx = (clientX - rect.left - view.ox) / view.s, wy = (clientY - rect.top - view.oy) / view.s;
+  let best = null, bd = 24;
+  for (const a of agents) { const d = Math.hypot(a.x - wx, a.y - 3 - wy); if (d < bd) { bd = d; best = a; } }
+  return best;
+}
+canvas.addEventListener('pointermove', e => { hover = agentAt(e.clientX, e.clientY); canvas.style.cursor = hover ? 'pointer' : 'default'; });
+canvas.addEventListener('pointerleave', () => { hover = null; });
+canvas.addEventListener('click', e => { select(agentAt(e.clientX, e.clientY)); $('#hint').classList.add('hide'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') select(null); });
+
+/* =====================================================================
+   Panel lateral
+   ===================================================================== */
+const STATUS_TXT = { work: 'Trabajando', walk: 'Caminando', break: 'De descanso', wait: 'Te espera', idle: 'Libre' };
+const rosterEl = $('#roster'), rosterRows = new Map();
+let tab = 'team';
+function avatar(a, px) {
+  const cv = document.createElement('canvas'), d = 2;
+  cv.width = px * d; cv.height = px * d;
+  const c = cv.getContext('2d'); c.scale(d * px / 40, d * px / 40);
+  const fake = { ...a, x: 20, y: 21, sitting: true, path: [], status: 'idle', look: [0, .4], blink: 0, holding: null };
+  drawClaude(c, fake, 0, { static: true, r: 13 });
+  return cv;
+}
+function setTab(which) {
+  tab = which;
+  $('#tabTeam').setAttribute('aria-selected', which === 'team');
+  $('#tabFeed').setAttribute('aria-selected', which === 'feed');
+  $('#paneTeam').hidden = which !== 'team' || !!selected;
+  $('#paneFeed').hidden = which !== 'feed' || !!selected;
+  $('#paneDetail').hidden = !selected;
+}
+$('#tabTeam').onclick = () => { select(null); setTab('team'); };
+$('#tabFeed').onclick = () => { select(null); setTab('feed'); };
+
+let detailRev = -1;
+function select(a) {
+  selected = a; detailRev = -1;
+  if (a) renderDetail(true);
+  setTab(tab);
+}
+function renderDetail(full) {
+  const a = selected, el = $('#paneDetail');
+  if (!a) return;
+  if (full || !el.querySelector('.detail')) {
+    el.innerHTML = '';
+    const wrap = document.createElement('div'); wrap.className = 'detail';
+    wrap.innerHTML = `
+      <div class="head"><span class="av"></span><div><h2></h2><div class="role"></div></div><button class="close" aria-label="Cerrar">×</button></div>
+      <div style="margin-top:12px"><span class="chip"></span></div>
+      <div class="box now"><h3>Haciendo ahora</h3><p class="act"></p></div>
+      <div class="box task"><h3>Encargo</h3><p class="prompt"></p></div>
+      <div class="stats"><div><b class="s1">0</b><span>tareas</span></div><div><b class="s2">0</b><span>cafés</span></div><div><b class="s3">0</b><span>pasos</span></div></div>
+      <div class="box"><h3>Historial</h3><ul class="log"></ul></div>`;
+    wrap.querySelector('.av').replaceWith(avatar(a, 64));
+    wrap.querySelector('h2').textContent = a.name;
+    wrap.querySelector('.role').textContent = a.role;
+    wrap.querySelector('.close').onclick = () => select(null);
+    el.append(wrap);
+  }
+  const w = el.querySelector('.detail');
+  const chip = w.querySelector('.chip'); chip.className = 'chip ' + a.status; chip.textContent = STATUS_TXT[a.status] || 'Libre';
+  w.querySelector('.act').textContent = a.activity;
+  const task = a.lead ? (a.prompt ? `«${a.prompt}»${a.project ? ' · ' + a.project : ''}` : '') : a.current ? `De ${a.current.from}${a.current.prompt ? ` · «${clip(a.current.prompt, 140)}»` : ''}` : '';
+  w.querySelector('.task').hidden = !task;
+  w.querySelector('.prompt').textContent = task;
+  w.querySelector('.s1').textContent = a.stats.jobs;
+  w.querySelector('.s2').textContent = a.stats.coffee;
+  w.querySelector('.s3').textContent = Math.round(a.stats.walked / 12);
+  const log = w.querySelector('.log'); log.innerHTML = '';
+  if (!a.log.length) { const li = document.createElement('li'); li.style.gridTemplateColumns = '1fr'; li.style.color = 'var(--muted)'; li.textContent = 'Todavía nada. Espera a que le llegue trabajo.'; log.append(li); }
+  for (const e of a.log.slice(0, 30)) {
+    const li = document.createElement('li');
+    const tm = document.createElement('time'); tm.textContent = hhmm(e.ts);
+    const ic = document.createElement('span'); ic.textContent = e.icon;
+    const tx = document.createElement('span'); tx.textContent = e.text;
+    li.append(tm, ic, tx); log.append(li);
+  }
+}
+
+let uiTick = 0;
+function updateUI() {
+  if (selected && !agents.includes(selected)) select(null);
+  if (selected && selected.rev !== detailRev) { detailRev = selected.rev; renderDetail(false); }
+  if (++uiTick % 12) return;
+  // roster con claves (sin reconstruir, para no perder clics)
+  const ids = new Set(agents.map(a => a.id));
+  for (const [id, row] of rosterRows) if (!ids.has(id)) { row.el.remove(); rosterRows.delete(id); }
+  for (const a of agents) {
+    let row = rosterRows.get(a.id);
+    if (!row) {
+      const li = document.createElement('li');
+      const info = document.createElement('div');
+      const b = document.createElement('b'); b.textContent = a.name;
+      const act = document.createElement('span'); act.className = 'act';
+      const chip = document.createElement('span'); chip.className = 'chip';
+      info.append(b, act); li.append(avatar(a, 40), info, chip);
+      li.onclick = () => select(a);
+      rosterEl.append(li);
+      row = { el: li, act, chip }; rosterRows.set(a.id, row);
+    }
+    row.act.textContent = a.activity;
+    row.chip.className = 'chip ' + a.status; row.chip.textContent = STATUS_TXT[a.status] || 'Libre';
+    row.el.classList.toggle('sel', a === selected);
+  }
+  $('#statJobs').textContent = office.jobs;
+  $('#statCoffee').textContent = office.coffee;
+}
+
+/* =====================================================================
+   Conexión en directo + modo demo
+   ===================================================================== */
+let live = false, demoOn = false, demoTouched = false, demoTimer = null;
+function setConn(state) {
+  const pill = $('#connPill'); pill.className = 'pill ' + (state === 'live' ? 'live' : state === 'demo' ? 'demo' : '');
+  $('#connText').textContent = state === 'live' ? 'En directo' : state === 'demo' ? 'Sin conexión' : 'Reconectando…';
+}
+function connect() {
+  if (location.protocol === 'file:') {
+    setConn('demo'); setDemo(true);
+    showHint('Modo demo. Para conectarlo a tu Claude ejecuta <code>node server.js</code> y abre <code>localhost:4747</code>.', 9000);
+    return;
+  }
+  let opened = false;
+  const es = new EventSource('events');
+  es.onopen = () => { opened = true; live = true; setConn('live'); if (!demoTouched) setDemo(false); };
+  es.onmessage = m => {
+    let ev; try { ev = JSON.parse(m.data); } catch (_) { return; }
+    if (ev.kind === 'hello') { (ev.history || []).forEach(e => feedPush(e, true)); return; }
+    handleEvent(ev);
+  };
+  es.onerror = () => {
+    live = false;
+    if (!opened) { es.close(); setConn('demo'); if (!demoTouched) setDemo(true); showHint('No encuentro el servidor: estás viendo la demo. Pulsa «Conectar» para ver cómo enlazarlo.', 8000); }
+    else setConn('retry');
+  };
+}
+function showHint(html, ms) { const h = $('#hint'); h.innerHTML = html; h.classList.remove('hide'); clearTimeout(showHint.t); showHint.t = setTimeout(() => h.classList.add('hide'), ms); }
+
+function setDemo(on) {
+  demoOn = on; $('#demoBtn').setAttribute('aria-pressed', on);
+  clearTimeout(demoTimer);
+  if (on) demoTimer = setTimeout(demoLoop, 1500);
+}
+$('#demoBtn').onclick = () => { demoTouched = true; setDemo(!demoOn); };
+function demoLoop() {
+  if (!demoOn) return;
+  Math.random() < .42 ? simulateChat(pick(DEMO_CHAT)) : simulateCode(pick(DEMO_CODE).p);
+  demoTimer = setTimeout(demoLoop, rand(16000, 30000));
+}
+
+const DEMO_CHAT = ['Explícame los punteros en C con un ejemplo', 'Redacta un email para un cliente de AUTOMATIA', 'Ideas para un flujo de n8n que lea facturas', 'Resume este PDF en 5 puntos', 'Tradúceme esto al catalán', '¿Cómo funciona un bucle for paso a paso?'];
+const DEMO_CODE = [{ p: 'Arregla el bug del login y pasa los tests' }, { p: 'Añade modo oscuro a la web' }, { p: 'Investiga cómo usar la API de Stripe y crea el endpoint' }, { p: 'Refactoriza el módulo de facturas con subagentes' }, { p: 'Lanza el workflow de n8n para los leads de hoy' }];
+
+let simSeq = 0;
+const emit = ev => handleEvent({ ts: Date.now(), ...ev }, true);
+function simulateChat(prompt) {
+  emit({ source: 'chat', kind: 'prompt', prompt });
+  setTimeout(() => emit({ source: 'chat', kind: 'stop' }), rand(6000, 12000));
+}
+function planFor(prompt) {
+  const p = prompt.toLowerCase(), s = [];
+  const file = pick(['src/app.js', 'src/auth/login.ts', 'index.html', 'server.js', 'src/facturas.py', 'styles.css']);
+  if (/plan|tarea|paso|refactor|todo/.test(p) || Math.random() < .5) s.push(['TodoWrite', { todos: [{ content: clip(prompt, 26), status: 'in_progress' }, { content: 'Revisar el código', status: 'pending' }, { content: 'Pasar los tests', status: 'pending' }] }]);
+  s.push(['Glob', { pattern: '**/*.{js,ts,html}' }], ['Read', { file_path: file }], ['Grep', { pattern: pick(['login', 'theme', 'invoice', 'TODO']) }]);
+  if (/web|investiga|busca|api|docs|stripe/.test(p)) s.push(['WebSearch', { query: clip(prompt, 40) }], ['WebFetch', { url: 'https://docs.example.com/guia' }]);
+  if (/subagente|agentes|explora|refactor/.test(p)) s.push(['Task', { description: 'Explorar el módulo', subagent_type: 'Explore' }], ['Task', { description: 'Revisar los tests', subagent_type: 'general-purpose' }]);
+  if (/n8n|mcp|drive|workflow|flujo/.test(p)) s.push(['mcp__n8n__execute_workflow', {}], ['mcp__drive__search_files', {}]);
+  if (/crea|nuevo|añade|endpoint|modo/.test(p)) s.push(['Write', { file_path: 'src/' + pick(['nuevo.js', 'theme.css', 'endpoint.ts']) }]);
+  s.push(['Edit', { file_path: file, edits: [1, 2] }], ['Read', { file_path: file }]);
+  s.push(['Bash', { command: /test|prueba/.test(p) ? 'npm test' : pick(['npm run build', 'git status', 'npm test', 'python -m pytest']) }]);
+  if (Math.random() < .3) s.push(['Edit', { file_path: file }], ['Bash', { command: 'npm test' }]);
+  return s;
+}
+function simulateCode(prompt) {
+  const steps = planFor(prompt);
+  emit({ source: 'code', kind: 'prompt', prompt, project: 'mi-proyecto' });
+  let t = rand(1400, 2400), subs = [];
+  steps.forEach(([tool, detail], i) => {
+    const id = 'sim' + (++simSeq);
+    const dur = tool === 'Task' ? rand(9000, 15000) : tool === 'Bash' ? rand(2500, 5000) : tool.startsWith('Web') ? rand(2500, 4000) : rand(500, 1600);
+    setTimeout(() => emit({ source: 'code', kind: 'tool_start', tool, detail, toolUseId: id }), t);
+    setTimeout(() => emit({ source: 'code', kind: 'tool_end', tool, toolUseId: id }), t + dur);
+    if (tool === 'Task') subs.push(t + dur);
+    t += tool === 'Task' ? rand(600, 1200) : dur + rand(500, 1400);
+  });
+  if (Math.random() < .25) { const at = t * .6; setTimeout(() => emit({ source: 'code', kind: 'notify', message: 'Claude necesita permiso para usar Bash' }), at); }
+  const end = Math.max(t, ...subs) + rand(1200, 2200);
+  setTimeout(() => emit({ source: 'code', kind: 'stop' }), end);
+}
+
+// Simulador del panel
+let simSrc = 'chat';
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+  simSrc = b.dataset.src;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  $('#simInput').placeholder = simSrc === 'chat' ? 'Prueba: «explícame los arrays en C»' : 'Prueba: «arregla el login y pasa los tests»';
+});
+$('#simForm').onsubmit = e => {
+  e.preventDefault();
+  const v = $('#simInput').value.trim() || (simSrc === 'chat' ? pick(DEMO_CHAT) : pick(DEMO_CODE).p);
+  simSrc === 'chat' ? simulateChat(v) : simulateCode(v);
+  $('#simInput').value = '';
+};
+
+// Ayuda
+$('#helpBtn').onclick = () => $('#help').showModal();
+$('#helpClose').onclick = () => $('#help').close();
+$('#help').addEventListener('click', e => { if (e.target === $('#help')) $('#help').close(); });
+
+// Logo de la cabecera
+(() => {
+  const r = 15, rays = makeAgent(ROLES[0]).rays, n = rays.length; let d = '';
+  for (let i = 0; i < n; i++) {
+    const a0 = -.15 + i / n * TAU, a1 = a0 + TAU / n / 2;
+    d += `${i ? 'L' : 'M'}${(Math.cos(a0) * r * rays[i]).toFixed(2)} ${(Math.sin(a0) * r * rays[i]).toFixed(2)} L${(Math.cos(a1) * r * .44).toFixed(2)} ${(Math.sin(a1) * r * .44).toFixed(2)} `;
+  }
+  $('#logoMark').innerHTML = `<path d="${d}Z" fill="#D97757" stroke="#D97757" stroke-width="3" stroke-linejoin="round"/><circle cx="0" cy="0" r="7.5" fill="#D97757"/><ellipse cx="-3" cy="-1" rx="1.3" ry="2.1" fill="#2A1A12"/><ellipse cx="3" cy="-1" rx="1.3" ry="2.1" fill="#2A1A12"/>`;
+})();
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+paintBackground();
+resize();
+setTab('team');
+connect();
+setTimeout(() => $('#hint').classList.add('hide'), 7000);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

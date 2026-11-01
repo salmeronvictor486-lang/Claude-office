@@ -1,0 +1,13 @@
+{
+  "name": "claude-office",
+  "version": "1.0.0",
+  "description": "Una oficina vista desde arriba donde agentes con forma de Claude trabajan en directo según lo que haces en Claude Code y claude.ai",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "hooks:install": "node scripts/install-hooks.js",
+    "hooks:uninstall": "node scripts/install-hooks.js --uninstall"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}
