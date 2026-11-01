@@ -4,41 +4,24 @@ Una oficina vista desde arriba llena de Claudes. Cada vez que escribes a Claude,
 
 > Proyecto de fans, no oficial. Todo funciona en tu ordenador (`localhost`).
 
-## Arrancar
+## Empezar (3 pasos)
 
-Necesitas Node 18 o superior. No hay dependencias que instalar.
+1. **Instala Node.js** (versión LTS) desde https://nodejs.org si no lo tienes.
+2. **Doble clic en `Abrir Claude Office.bat`** (en Mac, `Abrir Claude Office.command`). Se abre la oficina en el navegador. Deja la ventana negra abierta mientras la uses.
+3. **Pulsa «Conectar» → «Aceptar y conectar».**
+   - **Claude Code** queda conectado al momento. Ciérralo y vuelve a abrirlo, y listo.
+   - **Chat de claude.ai**: se abre Tampermonkey con el botón «Instalar». Púlsalo y recarga claude.ai. Si no tienes Tampermonkey, instálalo antes desde https://www.tampermonkey.net (en Chrome, activa también «Permitir scripts de usuario» en los detalles de la extensión).
 
-```bash
-node server.js
-```
+Para desconectar, vuelve a pulsar el botón (ahora pone «Conectado») → «Desconectar».
 
-Abre **http://localhost:4747**. Si abres `index.html` sin el servidor, se ve en modo demo.
+### Detalles
 
-## Conectar Claude Code
-
-Instala los hooks una vez (hace copia de tu `~/.claude/settings.json` y respeta los hooks que ya tengas):
-
-```bash
-npm run hooks:install
-```
-
-Reinicia Claude Code. Funciona en la terminal, en VS Code y en la app de escritorio. Para quitarlos:
-
-```bash
-npm run hooks:uninstall
-```
-
-Si la oficina está cerrada, Claude Code funciona igual: el hook no bloquea ni imprime nada.
-
-## Conectar el chat de claude.ai
-
-claude.ai no tiene hooks, así que se usa un userscript:
-
-1. Instala la extensión **Tampermonkey** en tu navegador.
-2. Crea un script nuevo y pega el contenido de `userscript/claude-office.user.js`.
-3. Cuando envías un mensaje en claude.ai, «Chat» se pone a trabajar, y cuando Claude termina de responder, lo celebra.
-
-Si no quieres que el texto de tus prompts aparezca en la oficina, pon `SEND_TEXT = false` en el script. Ojo: si claude.ai cambia su web, el script puede dejar de detectar los mensajes. La app de escritorio de Claude (el chat) no admite userscripts.
+- El botón añade unos hooks a `~/.claude/settings.json`. Antes hace copia de seguridad y respeta los hooks que ya tengas. Funciona en la terminal, en VS Code y en la app de escritorio de Claude Code.
+- Si la oficina está cerrada, Claude Code funciona igual: el hook no bloquea ni imprime nada.
+- Si mueves la carpeta de sitio, vuelve a pulsar «Conectar» (los hooks guardan la ruta).
+- El botón solo acepta peticiones de la propia oficina: ninguna web puede tocar tu configuración.
+- claude.ai no tiene hooks: el puente detecta cuándo envías un mensaje y cuándo Claude termina. Si claude.ai cambia su web, puede dejar de funcionar. Pon `SEND_TEXT = false` en el script si no quieres que se vea el texto de tus prompts. La app de escritorio del chat no admite scripts.
+- También se puede hacer a mano: `node server.js` y `npm run hooks:install` / `npm run hooks:uninstall`.
 
 ## Quién hace qué
 
@@ -70,5 +53,6 @@ Tipos (`kind`): `prompt`, `tool_start`, `tool_end`, `stop`, `notify`, `message`.
 - `index.html`: la oficina (un solo archivo, también funciona en el móvil)
 - `server.js`: servidor local sin dependencias (SSE)
 - `hooks/send.js`: hook que reenvía los eventos de Claude Code
-- `scripts/install-hooks.js`: instalador de los hooks
+- `scripts/install-hooks.js`: conecta/desconecta Claude Code (lo usa el botón)
+- `Abrir Claude Office.bat` / `.command`: abrir con doble clic
 - `userscript/claude-office.user.js`: puente para claude.ai

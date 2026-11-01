@@ -115,18 +115,40 @@
   .sim form > button{height:34px}
   .sim small{display:block;margin-top:6px;color:var(--muted);font-size:11.5px;padding-left:4px}
 
-  /* Diálogo de ayuda */
-  dialog{border:none;border-radius:18px;padding:0;max-width:560px;width:calc(100% - 28px);box-shadow:0 30px 80px #0004;color:var(--ink)}
-  dialog::backdrop{background:#1F1E1B66;backdrop-filter:blur(2px)}
-  .dlg{padding:22px 24px 20px}
-  .dlg h2{margin:0 0 4px;font:600 22px/1.15 ui-serif,Georgia,serif}
-  .dlg > p{margin:0 0 14px;color:var(--muted)}
-  .step{display:grid;grid-template-columns:28px 1fr;gap:10px;margin:12px 0}
-  .step .n{width:26px;height:26px;border-radius:50%;background:var(--clay);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
-  .step b{display:block}
-  .step p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
-  pre{margin:6px 0 0;padding:9px 11px;background:#1F1E1B;color:#F3EDE3;border-radius:10px;font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:auto}
-  .dlg .foot{display:flex;justify-content:flex-end;margin-top:16px}
+  /* Diálogo de conexión (pantalla de permisos) */
+  dialog{border:none;border-radius:20px;padding:0;max-width:470px;width:calc(100% - 24px);box-shadow:0 30px 80px #0004;color:var(--ink);background:var(--paper)}
+  dialog::backdrop{background:#1F1E1B73;backdrop-filter:blur(3px)}
+  .consent{padding:26px 24px 20px}
+  .pair{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px}
+  .pair .ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--card);border:1px solid var(--line);box-shadow:0 2px 6px #0000000d}
+  .pair .ico.office{background:var(--ink);border-color:var(--ink)}
+  .pair .link{width:64px;height:2px;background:repeating-linear-gradient(90deg,var(--clay) 0 6px,transparent 6px 11px);background-size:22px 2px;animation:flow 1s linear infinite}
+  .pair.ok .link{background:var(--green);animation:none}
+  @keyframes flow{to{background-position:22px 0}}
+  .consent h2{margin:0;text-align:center;font:600 21px/1.2 ui-serif,Georgia,serif;letter-spacing:-.01em}
+  .consent .sub{margin:6px 0 16px;text-align:center;color:var(--muted);font-size:13px}
+  .perms{list-style:none;margin:0 0 16px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line-2)}
+  .perms li{display:grid;grid-template-columns:20px 1fr;gap:8px;padding:4px 0;font-size:13px;color:var(--ink-2)}
+  .perms .y{color:var(--green);font-weight:700}.perms .n{color:var(--red);font-weight:700}
+  .conn{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-top:8px}
+  .conn .ci{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:#F3EEE6;font:700 13px ui-monospace,Menlo,Consolas,monospace}
+  .conn b{display:block;font-size:14px}
+  .conn small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+  .conn small.ok{color:var(--green);font-weight:600}
+  .conn small.warn{color:var(--amber);font-weight:600}
+  .conn small a{color:var(--clay-d)}
+  .conn.on{border-color:#BFDCC8;background:#F6FBF7}
+  .conn button{height:32px;font-size:13px}
+  .note{margin:12px 2px 0;padding:10px 12px;border-radius:12px;background:#FFF6E6;border:1px solid #F0D9AC;color:#6E4C12;font-size:12.5px}
+  .note[hidden]{display:none}
+  .note code{background:#0000000d;padding:1px 5px;border-radius:5px}
+  .consent .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  button.clay{background:var(--clay);border-color:var(--clay);color:#fff;font-weight:600}
+  button.clay:hover{background:var(--clay-d);border-color:var(--clay-d)}
+  button.clay:disabled{opacity:.55;cursor:default}
+  #helpBtn.connected{background:var(--card);color:var(--ink);border-color:#BFDCC8}
+  #helpBtn.connected::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;vertical-align:1px}
+  .privacy{margin:12px 0 0;text-align:center;color:var(--muted);font-size:11.5px}
 
   /* ── Móvil ── */
   @media (max-width: 900px){
@@ -196,20 +218,36 @@
   </div>
 </div>
 
-<dialog id="help">
-  <div class="dlg">
-    <h2>Conecta tu Claude con la oficina</h2>
-    <p>Todo funciona en tu ordenador: nada sale de <code>localhost</code>.</p>
-    <div class="step"><span class="n">1</span><div><b>Abre la oficina con el servidor</b>
-      <p>En la carpeta del proyecto:</p><pre>node server.js</pre><p>y entra en <code>http://localhost:4747</code>.</p></div></div>
-    <div class="step"><span class="n">2</span><div><b>Claude Code → agente «Code» y su equipo</b>
-      <p>Instala los hooks una sola vez y reinicia Claude Code:</p><pre>npm run hooks:install</pre></div></div>
-    <div class="step"><span class="n">3</span><div><b>Chat de claude.ai → agente «Chat»</b>
-      <p>Instala la extensión Tampermonkey y añade el script <code>userscript/claude-office.user.js</code>. Al enviar un mensaje en claude.ai, «Chat» se pone a trabajar.</p></div></div>
-    <div class="step"><span class="n">4</span><div><b>Cualquier otra cosa (n8n, scripts…)</b>
-      <pre>curl -X POST localhost:4747/event -H "Content-Type: application/json" \
-  -d '{"source":"chat","kind":"prompt","prompt":"Hola oficina"}'</pre></div></div>
-    <div class="foot"><button class="dark" id="helpClose">Entendido</button></div>
+<dialog id="connect" aria-labelledby="connTitle">
+  <div class="consent">
+    <div class="pair" id="connPair">
+      <span class="ico office"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="4" y="5" width="22" height="20" rx="3" fill="none" stroke="#F4F0E8" stroke-width="2"/><path d="M4 12h22M13 12v13" stroke="#F4F0E8" stroke-width="2"/><circle cx="20" cy="18.5" r="2.6" fill="#D97757"/></svg></span>
+      <span class="link"></span>
+      <span class="ico"><svg width="38" height="38" viewBox="-20 -20 40 40" aria-hidden="true"><use href="#logoMark"/></svg></span>
+    </div>
+    <h2 id="connTitle">Claude Office quiere conectarse a tu Claude</h2>
+    <p class="sub">Para que tus agentes se muevan cada vez que trabajas con Claude.</p>
+    <ul class="perms">
+      <li><span class="y">✓</span>Ver cuándo envías un prompt y qué herramientas usa Claude</li>
+      <li><span class="y">✓</span>Todo se queda en este ordenador: nada sale de localhost</li>
+      <li><span class="n">✕</span>No puede leer tu historial ni escribir a Claude por ti</li>
+    </ul>
+    <div class="conn" id="rowCode">
+      <span class="ci">&gt;_</span>
+      <div><b>Claude Code</b><small id="codeState">Sin conectar</small></div>
+      <button id="codeBtn">Conectar</button>
+    </div>
+    <div class="conn" id="rowChat">
+      <span class="ci">💬</span>
+      <div><b>Chat de claude.ai</b><small id="chatState">Sin conectar</small></div>
+      <button id="chatBtn">Instalar</button>
+    </div>
+    <div class="note" id="connNote" hidden></div>
+    <div class="foot">
+      <button id="connCancel">Ahora no</button>
+      <button class="clay" id="connAccept">Aceptar y conectar</button>
+    </div>
+    <p class="privacy">Puedes desconectarlo cuando quieras desde este mismo botón.</p>
   </div>
 </dialog>
 
@@ -1289,20 +1327,24 @@ function setConn(state) {
 function connect() {
   if (location.protocol === 'file:') {
     setConn('demo'); setDemo(true);
-    showHint('Modo demo. Para conectarlo a tu Claude ejecuta <code>node server.js</code> y abre <code>localhost:4747</code>.', 9000);
+    showHint('Modo demo. Para conectarlo a tu Claude abre «Abrir Claude Office» y pulsa «Conectar».', 9000);
     return;
   }
   let opened = false;
   const es = new EventSource('events');
-  es.onopen = () => { opened = true; live = true; setConn('live'); if (!demoTouched) setDemo(false); };
+  es.onopen = () => {
+    opened = true; live = true; setConn('live'); if (!demoTouched) setDemo(false);
+    refreshStatus().then(c => { if (c.server && !c.code.installed && !chatOnline() && !localStorage.getItem('co-consent-later')) openConnect(); });
+  };
   es.onmessage = m => {
     let ev; try { ev = JSON.parse(m.data); } catch (_) { return; }
     if (ev.kind === 'hello') { (ev.history || []).forEach(e => feedPush(e, true)); return; }
     handleEvent(ev);
+    if (ev.source === 'code' || ev.source === 'chat') { conn.now = Date.now(); conn[ev.source === 'code' ? 'code' : 'chat'].lastSeen = Date.now(); if (dlg.open || !$('#helpBtn').classList.contains('connected')) renderConn(); }
   };
   es.onerror = () => {
     live = false;
-    if (!opened) { es.close(); setConn('demo'); if (!demoTouched) setDemo(true); showHint('No encuentro el servidor: estás viendo la demo. Pulsa «Conectar» para ver cómo enlazarlo.', 8000); }
+    if (!opened) { es.close(); setConn('demo'); if (!demoTouched) setDemo(true); showHint('No encuentro el servidor: estás viendo la demo. Pulsa «Conectar» para enlazarlo con tu Claude.', 8000); }
     else setConn('retry');
   };
 }
@@ -1374,10 +1416,90 @@ $('#simForm').onsubmit = e => {
   $('#simInput').value = '';
 };
 
-// Ayuda
-$('#helpBtn').onclick = () => $('#help').showModal();
-$('#helpClose').onclick = () => $('#help').close();
-$('#help').addEventListener('click', e => { if (e.target === $('#help')) $('#help').close(); });
+/* =====================================================================
+   Conectar con Claude (un clic)
+   ===================================================================== */
+const dlg = $('#connect');
+let conn = { server: false, code: { installed: false }, chat: { lastSeen: null }, now: Date.now() };
+let connPoll = null, codeJustConnected = false;
+const chatOnline = () => conn.chat.lastSeen && conn.now - conn.chat.lastSeen < 150000;
+const codeOk = () => conn.code.installed && conn.code.current;
+
+async function refreshStatus() {
+  try {
+    if (location.protocol === 'file:') throw 0;
+    const r = await fetch('api/status', { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    conn = { ...(await r.json()), server: true };
+  } catch (_) { conn.server = false; }
+  renderConn();
+  return conn;
+}
+function note(html) { const n = $('#connNote'); n.hidden = !html; n.innerHTML = html || ''; }
+function renderConn() {
+  const cs = $('#codeState'), hs = $('#chatState');
+  if (!conn.server) {
+    cs.className = hs.className = 'warn';
+    cs.textContent = hs.textContent = 'Primero abre la oficina en tu ordenador';
+    $('#codeBtn').disabled = $('#chatBtn').disabled = $('#connAccept').disabled = true;
+    note('Haz doble clic en <b>«Abrir Claude Office»</b> (o ejecuta <code>node server.js</code>) y vuelve a pulsar «Conectar».');
+  } else {
+    $('#codeBtn').disabled = $('#chatBtn').disabled = $('#connAccept').disabled = false;
+    if (codeOk()) {
+      const active = conn.code.lastSeen && conn.now - conn.code.lastSeen < 600000;
+      cs.className = 'ok'; cs.textContent = active ? 'Conectado · recibiendo actividad' : codeJustConnected ? 'Conectado · reinicia Claude Code' : 'Conectado';
+      $('#codeBtn').textContent = 'Desconectar';
+    } else {
+      cs.className = conn.code.installed ? 'warn' : '';
+      cs.textContent = conn.code.error ? conn.code.error : conn.code.installed ? 'Conectado desde otra carpeta: pulsa para actualizar' : 'Sin conectar';
+      $('#codeBtn').textContent = 'Conectar';
+    }
+    if (chatOnline()) { hs.className = 'ok'; hs.textContent = 'Conectado'; $('#chatBtn').textContent = 'Reinstalar'; }
+    else { hs.className = ''; hs.innerHTML = 'Necesita la extensión <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">Tampermonkey</a>'; $('#chatBtn').textContent = 'Instalar'; }
+  }
+  $('#rowCode').classList.toggle('on', conn.server && codeOk());
+  $('#rowChat').classList.toggle('on', conn.server && !!chatOnline());
+  const all = conn.server && codeOk() && chatOnline();
+  $('#connPair').classList.toggle('ok', conn.server && (codeOk() || !!chatOnline()));
+  $('#connAccept').textContent = all ? 'Listo' : 'Aceptar y conectar';
+  const hb = $('#helpBtn'), any = conn.server && (codeOk() || chatOnline());
+  hb.classList.toggle('connected', !!any); hb.classList.toggle('dark', !any);
+  hb.textContent = any ? 'Conectado' : 'Conectar';
+}
+async function setCode(on) {
+  const r = await fetch(on ? 'api/connect/code' : 'api/disconnect/code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.ok) { note('No he podido tocar la configuración de Claude Code: ' + (data.error || r.status)); return false; }
+  codeJustConnected = on;
+  await refreshStatus();
+  return true;
+}
+function installChat() {
+  window.open('claude-office.user.js', '_blank');
+  note('Se abre Tampermonkey: pulsa <b>«Instalar»</b> y recarga claude.ai. Si en Chrome no aparece nada, activa <b>«Permitir scripts de usuario»</b> en los detalles de la extensión Tampermonkey (<code>chrome://extensions</code>).');
+}
+function openConnect() {
+  note('');
+  refreshStatus();
+  if (!dlg.open) dlg.showModal();
+  clearInterval(connPoll); connPoll = setInterval(refreshStatus, 3000);
+}
+dlg.addEventListener('close', () => clearInterval(connPoll));
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+$('#helpBtn').onclick = openConnect;
+$('#connCancel').onclick = () => { localStorage.setItem('co-consent-later', '1'); dlg.close(); };
+$('#codeBtn').onclick = async () => {
+  if (codeOk()) { if (await setCode(false)) note('Claude Code desconectado. La oficina ya no recibirá su actividad.'); }
+  else if (await setCode(true)) note('¡Conectado! <b>Cierra y vuelve a abrir Claude Code</b> y escríbele algo: verás a «Code» ponerse a trabajar.');
+};
+$('#chatBtn').onclick = installChat;
+$('#connAccept').onclick = async () => {
+  if (codeOk() && chatOnline()) return dlg.close();
+  let msg = [];
+  if (!codeOk() && await setCode(true)) msg.push('<b>Claude Code conectado.</b> Ciérralo y vuelve a abrirlo.');
+  if (!chatOnline()) { installChat(); msg.push('Para el chat se abre Tampermonkey: pulsa <b>«Instalar»</b> y recarga claude.ai.'); }
+  note(msg.join('<br>'));
+};
 
 // Logo de la cabecera
 (() => {

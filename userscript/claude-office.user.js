@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Claude Office · puente para claude.ai
 // @namespace    claude-office
-// @version      1.0.0
+// @version      1.1.0
 // @description  Avisa a tu Claude Office local cuando envías un mensaje en claude.ai y cuando Claude termina de responder.
 // @match        https://claude.ai/*
 // @grant        GM_xmlhttpRequest
 // @connect      localhost
 // @connect      127.0.0.1
 // @run-at       document-idle
+// @updateURL    http://localhost:4747/claude-office.user.js
+// @downloadURL  http://localhost:4747/claude-office.user.js
 // ==/UserScript==
 
 (function () {
@@ -25,6 +27,10 @@
       });
     } catch (_) { /* la oficina está cerrada: no pasa nada */ }
   };
+
+  // Latido: así la oficina sabe que el puente está conectado
+  post({ kind: 'ping' });
+  setInterval(() => post({ kind: 'ping' }), 60000);
 
   const composer = () => document.querySelector('div[contenteditable="true"]');
   let lastPromptAt = 0;
